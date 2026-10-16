@@ -3,13 +3,20 @@
 ## Routes (proposed)
 `/login`, `/register`, `/activate-account`, `/forgot-password`, `/reset-password`. Confirm routing against existing app before creation.
 
-F04 implements /register and /activate-account. /login remains the F03 status shell with registration navigation and activation-success messaging; its full login form is still F05 work. Password recovery routes are not implemented.
+F04 implements /register and /activate-account. F05 adds the functional /login form to F03's status shell, retaining expiration and activation-success messaging. Password recovery routes are not implemented.
 
 ## Contract
 See `authentication.md`. Register requires name, email, password. Login requires email/password and returns `accessToken`, `user`. Activation and reset OTP must match `^\d{8}$`; resend and forgot password accept email only.
 
 ## UX / acceptance
-Accessible forms with React Hook Form+Zod; field-level errors, pending states and generic account-discovery-safe messages where server specifies generic response. Successful login begins company-context flow in its future task. Do not invent /me, refresh-token, role claims or automatic activation behavior. Test 400/401/409 scenarios as documented. F03 implements the approved HttpOnly-cookie BFF, local logout and protected route foundation described in session-management.md. /login currently provides only a session status/expiration shell; the complete form and company-context flow remain future work.
+Accessible forms with React Hook Form+Zod; field-level errors, pending states and generic account-discovery-safe messages where server specifies generic response. Successful login begins company-context flow in its future task. Do not invent /me, refresh-token, role claims or automatic activation behavior. Test 400/401/409 scenarios as documented. F03 implements the approved HttpOnly-cookie BFF, local logout and protected route foundation described in session-management.md. F05 completes the login form and verifies that foundation; company-context flow remains F06 work.
+
+## F05 login and local logout
+
+- LoginForm uses the existing email/required-password validation, Input, PasswordInput, Button and authentication SCSS. It supports keyboard submission, visible field errors, password visibility, busy/disabled states and an in-flight submission guard. No password complexity rule is added.
+- The Server Component restricts returnTo with F03's safeReturnTo. features/auth/login.ts sends JSON credentials and that destination to the existing /api/auth/login with same-origin credentials, no-store and redirect rejection. Only F03 calls NestJS POST /auth/login and sets the HttpOnly cookie. The browser adapter ignores user/diagnostic properties, validates the returned destination against the server-sanitized value and performs a full document navigation, avoiding stale router data across sign-in.
+- HTTP 401 produces the invalid-credentials message; other errors use F02's safe messages. Unexpected technical errors are not displayed. Successful navigation clears form values. Registration and activation links remain public.
+- The dashboard's existing native POST Sair action clears only the local cookie and redirects to login. It is not backend JWT revocation. Existing per-render authoritative guards, no-store policies, 401 cleanup and 403 preservation are reused without changes. No company routing, refresh flow or new BFF endpoint is added.
 
 ## F04 registration and activation
 

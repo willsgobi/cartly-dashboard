@@ -22,7 +22,7 @@ Login reads at most 16 KiB from the request stream and validates incoming fields
 
 authenticatedRequest is a server-only typed wrapper around F02: it checks local token usability, then forwards Bearer to a server-selected, contract-typed operation at API_BASE_URL. There is no public catch-all proxy and no client-controlled backend URL/path. F02 retains serialization, AbortSignal, no-store, redirect rejection and normalized errors. Future authenticated Route Handlers must apply assertSameOrigin before mutations and use authenticatedErrorResponse when catching errors. This response adapter clears only 401, preserves HTTP status and includes a safe login destination. 403 never clears cookies or initiates login.
 
-For JSON fetch consumers, handle 401 by navigating to the returned redirectTo after receiving the response; do not retry or navigate for 403. JSON responses retain HTTP 401 rather than returning redirect HTML. F03 has no browser data-fetch flow or complete login form; those consumers belong to subsequent UI tasks.
+For authenticated JSON fetch consumers, handle 401 by navigating to the returned redirectTo after receiving the response; do not retry or navigate for 403. JSON responses retain HTTP 401 rather than returning redirect HTML. F05's login adapter uses the existing login BFF (a login 401 means invalid credentials), validates the server-sanitized destination and navigates the whole document after success. It never receives a JWT. No general browser protected-data consumer is introduced.
 
 ## Protected rendering and invalidation
 
@@ -33,6 +33,8 @@ Server Components cannot mutate cookies. Their backend 401 redirects to /login?r
 safeReturnTo allows only dashboard paths/query strings, rejecting external/protocol-relative URLs, backslashes, control characters and auth/API destinations; fallback is /dashboard. JWTs never appear in redirect URLs.
 
 Cache Components remain enabled. Dynamic session reads use Suspense with a non-sensitive loading fallback. No protected data uses persistent use cache. Upstream authenticated requests, BFF responses, protected HTML and login/redirect responses are private/no-store. Intermediaries must honor those response headers.
+
+The server rendering guard explicitly awaits connection() before reading the session or checking JWT expiry. With partial prefetching, cookies can already be available during runtime prerendering, which does not permit an unstable Date.now() read. This request-time boundary keeps expiry current and avoids the blocking-prerender-current-time error; session results and the clock are never cached. The existing Suspense boundary still provides the non-sensitive shell.
 
 Local logout deletes the browser cookie; the underlying JWT remains valid at NestJS until expiration. No undocumented logout, current-user, refresh or permission endpoint is called.
 
@@ -52,4 +54,8 @@ HttpOnly reduces XSS token theft but does not make same-origin script injection 
 - npm run build, then npm run test:auth:production: starts/stops a real Next.js production server and a loopback-only mock API. Verifies actual routing, GET 405, cookie attributes, SSR access, forged/expired JWT rejection, no-store, no response token leakage, CSRF, 401 cleanup, 403 preservation and logout. No production API is contacted.
 - npx tsc --noEmit --incremental false; npm run lint; npm run api:check.
 
-The implementation follows the official [Next.js authentication guide](https://nextjs.org/docs/app/guides/authentication), [Proxy convention](https://nextjs.org/docs/app/api-reference/file-conventions/proxy) and [BFF guide](https://nextjs.org/docs/app/guides/backend-for-frontend). Actual deployment URLs and HTTPS are operator configuration; backend permission discovery remains unresolved. The full login form and company selection are not part of F03.
+F05 additionally provides npm run test:auth:browser, which runs the production HTTP assertions and then Chrome/Chromium through native DevTools Protocol, without an extra dependency. Set CHROME_PATH to the executable outside the default Windows Chrome location. It checks actual UI login, safe returns, HttpOnly/Secure cookies, refresh persistence, protected requests, backend 401 cleanup, 403 preservation, native logout and browser-history isolation after cookie deletion. All accounts/tokens are synthetic and the backend is isolated. Temporary browser profiles contain synthetic fixtures only.
+
+F05 live local NestJS checks confirmed invalid credentials, unauthenticated access, forged future JWTs and expired synthetic JWTs return 401; the actual local BFF returned 401 for invalid credentials and 303 for unauthenticated dashboard access. No activated test-account credentials were provided: successful real-NestJS login/protected access/persistence/logout remain a manual integration check. Passing the isolated production/browser suite is not a claim of positive real-backend verification.
+
+The implementation follows the official [Next.js authentication guide](https://nextjs.org/docs/app/guides/authentication), [Proxy convention](https://nextjs.org/docs/app/api-reference/file-conventions/proxy) and [BFF guide](https://nextjs.org/docs/app/guides/backend-for-frontend). Actual deployment URLs and HTTPS are operator configuration; backend permission discovery remains unresolved. F05 supplies the login form; company selection remains F06 work.

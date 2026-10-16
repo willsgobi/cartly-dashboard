@@ -10,7 +10,7 @@
 - Protected operations use OpenAPI `bearer` JWT security.
 
 ## Session design — F03 decision
-The F03 request explicitly authorizes an HttpOnly-cookie BFF and confirms there are no refresh tokens. The implemented decision, endpoint contracts, expiration policy, CSRF controls and verification commands are documented in [session-management.md](session-management.md). NestJS remains the token-validity and authorization authority. No backend introspection/logout operation, browser token storage or refresh flow is invented. The complete login UI and company-context flow remain future tasks.
+The F03 request explicitly authorizes an HttpOnly-cookie BFF and confirms there are no refresh tokens. The implemented decision, endpoint contracts, expiration policy, CSRF controls and verification commands are documented in [session-management.md](session-management.md). NestJS remains the token-validity and authorization authority. No backend introspection/logout operation, browser token storage or refresh flow is invented. F05 adds the complete login UI using that existing boundary; company-context flow remains F06 work.
 
 ## Guards and errors
 - Protect the dashboard server-side wherever feasible; handle 401 by invalidating the local session and prompting login, without loops.

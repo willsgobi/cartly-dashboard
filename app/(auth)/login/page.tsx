@@ -1,9 +1,10 @@
-import Link from "next/link";
 import { Suspense } from "react";
+import { LoginForm } from "../../../features/auth/LoginForm";
+import { safeReturnTo } from "../../../lib/auth/security";
 import styles from "../../session.module.scss";
 
 async function LoginStatus({ searchParams }: PageProps<"/login">) {
-  const { reason, status } = await searchParams;
+  const { reason, status, returnTo } = await searchParams;
   return (
     <main className={styles.page}>
       <section className={styles.card}>
@@ -11,8 +12,7 @@ async function LoginStatus({ searchParams }: PageProps<"/login">) {
         {reason === "expired" && <p role="status">Sua sessão expirou. Entre novamente para continuar.</p>}
         {status === "activated" && <p role="status">Conta ativada com sucesso. Você já pode entrar.</p>}
         <p>Entre na sua conta para acessar o painel administrativo.</p>
-        <Link href="/register">Criar conta</Link>
-        <Link href="/">Voltar ao início</Link>
+        <LoginForm returnTo={safeReturnTo(returnTo)} />
       </section>
     </main>
   );

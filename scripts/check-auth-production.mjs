@@ -68,6 +68,10 @@ try {
   const request = (path, init = {}) => fetch(origin + path, { redirect: "manual", ...init });
   const cookieHeader = `__Host-cartly_session=${token}`;
 
+  for (const path of ["/login", "/register", "/activate-account"]) {
+    assert.equal((await request(path)).status, 200, "Authentication pages must remain public");
+  }
+
   let response = await request("/dashboard");
   assert.equal(response.status, 303);
   assert.equal(new URL(response.headers.get("location"), origin).pathname, "/login");
@@ -134,6 +138,10 @@ try {
   assert.match(response.headers.get("set-cookie"), /Max-Age=0/);
   assert.equal(new URL(response.headers.get("location"), origin).pathname, "/login");
   assert.equal((await request("/dashboard")).status, 303);
+  if (process.argv.includes("--browser")) {
+    const { checkAuthBrowser } = await import("./check-auth-browser.mjs");
+    await checkAuthBrowser(origin, { setProtectedStatus: (status) => { protectedStatus = status; } });
+  }
   assert(upstreamPaths.every((path) => path === "/auth/login" || path === "/companies"));
   console.log("PASS production auth: login, secure cookies, CSRF, GET 405, protected SSR, forged/expired JWT, 401 cleanup, 403 preservation, no-store, no token leakage, logout");
 } catch (error) {

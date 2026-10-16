@@ -8,6 +8,7 @@
 - TypeScript, ESLint and Next.js build for static checks.
 - F03 adds mocked auth tests and npm run test:auth:production (after npm run build), which starts/stops a local production Next.js server and isolated mock API to verify protected rendering and cookie/CSRF behavior without contacting a real backend.
 - F04 tests mock the Server Action boundary in form tests and native Fetch in action tests. They cover required/email/password confirmation/OTP validation, paste and leading zeros, DTO stripping, errors, safe messages, loading, duplicate submissions and navigation. Actual backend checks use only invalid/missing payloads or an unknown synthetic email; successful mailbox/OTP verification requires a controlled test account.
+- F05 adds login form tests and browser BFF adapter tests, retaining the F03 session/guard/401/403/redirect coverage. After npm run build, npm run test:auth:browser extends the production suite with actual Chrome cookie persistence, full navigation, native logout and history isolation. Set CHROME_PATH if Chrome is not at the default Windows installation path. Real-account success is reported separately from the isolated mock-backed browser checks; never commit or print real credentials/tokens.
 
 ## Test pyramid
 - Unit: formatters, schema refinements (NORMAL/VARIANT/VARIANT_WITH_PRICE), company-scoped query builders, error mapping.

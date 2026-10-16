@@ -11,6 +11,9 @@ export const registerRequestSchema = z.object({
   password: z.string({ error: "Informe sua senha." }).min(1, "Informe sua senha."),
 });
 
+export const loginFormSchema = registerRequestSchema.pick({ email: true, password: true });
+export type LoginFormValues = z.infer<typeof loginFormSchema>;
+
 export const registerFormSchema = registerRequestSchema.extend({
   confirmPassword: z.string({ error: "Confirme sua senha." }).min(1, "Confirme sua senha."),
 }).refine((data) => data.password === data.confirmPassword, {

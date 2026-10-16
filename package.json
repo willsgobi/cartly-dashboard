@@ -9,6 +9,7 @@
     "lint": "eslint",
     "test": "vitest run",
     "test:auth:production": "node scripts/check-auth-production.mjs",
+    "test:auth:browser": "node scripts/check-auth-production.mjs --browser",
     "api:generate": "openapi-typescript docs/contracts/cartly-openapi.json -o lib/api/generated/schema.d.ts",
     "api:check": "openapi-typescript docs/contracts/cartly-openapi.json -o lib/api/generated/schema.d.ts --check"
   },

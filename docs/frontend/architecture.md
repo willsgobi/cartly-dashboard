@@ -27,6 +27,7 @@ Route group names do not affect URL. Avoid creating folders/routes not requested
 - Schemas validate browser input; backend enforces business rules and authorization.
 - F03 session code lives in lib/auth. Local /api/auth endpoints form a same-origin BFF; server-only helpers forward the HttpOnly-cookie JWT through F02. Proxy checks are optimistic; the server rendering/data boundary verifies backend access. See session-management.md. Never rely on a shared layout or JWT decoding alone.
 - F04 registration/activation forms and shared validation live in features/auth. Their Server Actions reuse F02 and F03's configured-origin protection. They do not create cookies or authenticate the user. No additional HTTP proxy/client abstraction is introduced.
+- F05 LoginForm reuses the same components/schemas. Its small browser adapter calls only the existing same-origin /api/auth/login BFF with cookie credentials; it does not replace F02 or call NestJS directly. The Server Component sanitizes returnTo, the BFF validates it again, and a full document navigation starts protected rendering with the new cookie. Existing native POST logout remains unchanged.
 - Keep DTOs distinct from UI view models where shapes differ. No direct `fetch` sprinkled throughout components.
 
 ## Company context
