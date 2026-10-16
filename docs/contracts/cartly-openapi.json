@@ -1,0 +1,2034 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/": {
+      "get": {
+        "operationId": "AppController_get",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "App"
+        ]
+      }
+    },
+    "/auth/register": {
+      "post": {
+        "operationId": "AuthController_register",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "User registered and activation email sent.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeUserResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed."
+          },
+          "409": {
+            "description": "Email is already registered."
+          }
+        },
+        "summary": "Register a new user account",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "operationId": "AuthController_login",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "JWT access token and safe user information returned.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoginResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed."
+          },
+          "401": {
+            "description": "Invalid credentials."
+          }
+        },
+        "summary": "Authenticate a user and issue a JWT access token",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/auth/activate-account": {
+      "post": {
+        "operationId": "AuthController_activate",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OtpDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Account activated successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeUserResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid, expired, used, or exhausted OTP."
+          }
+        },
+        "summary": "Activate a user account with an OTP",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/auth/resend-activation": {
+      "post": {
+        "operationId": "AuthController_resend",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmailDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Generic activation resend response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenericMessageResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed."
+          }
+        },
+        "summary": "Resend an account activation OTP",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/auth/forgot-password": {
+      "post": {
+        "operationId": "AuthController_forgot",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmailDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Generic password reset response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenericMessageResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed."
+          }
+        },
+        "summary": "Request a password reset OTP",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/auth/reset-password": {
+      "post": {
+        "operationId": "AuthController_reset",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResetPasswordDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Password reset successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeUserResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid, expired, used, or exhausted OTP."
+          }
+        },
+        "summary": "Reset a password with an OTP",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/companies": {
+      "get": {
+        "operationId": "CompaniesController_findAll",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CompanyListResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "JWT authentication is required."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List companies associated with the user",
+        "tags": [
+          "Companies"
+        ]
+      },
+      "post": {
+        "operationId": "CompaniesController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCompanyDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Company, address, and ADMIN association created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompanyResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed."
+          },
+          "401": {
+            "description": "JWT authentication is required."
+          },
+          "409": {
+            "description": "Company document is already registered."
+          },
+          "500": {
+            "description": "ADMIN role is not configured."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a company for the authenticated user",
+        "tags": [
+          "Companies"
+        ]
+      }
+    },
+    "/companies/{companyId}": {
+      "get": {
+        "operationId": "CompaniesController_findOne",
+        "parameters": [
+          {
+            "name": "companyId",
+            "required": true,
+            "in": "path",
+            "description": "Company UUID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompanyDetailsResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "JWT authentication is required."
+          },
+          "404": {
+            "description": "Company not found."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get an associated company by ID",
+        "tags": [
+          "Companies"
+        ]
+      },
+      "patch": {
+        "operationId": "CompaniesController_update",
+        "parameters": [
+          {
+            "name": "companyId",
+            "required": true,
+            "in": "path",
+            "description": "Company UUID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateCompanyDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompanyDetailsResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed."
+          },
+          "401": {
+            "description": "JWT authentication is required."
+          },
+          "404": {
+            "description": "Company not found."
+          },
+          "409": {
+            "description": "Company document is already registered."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Update an associated company",
+        "tags": [
+          "Companies"
+        ]
+      }
+    },
+    "/companies/{companyId}/address/{addressId}": {
+      "patch": {
+        "operationId": "CompaniesController_updateAddress",
+        "parameters": [
+          {
+            "name": "companyId",
+            "required": true,
+            "in": "path",
+            "description": "Company UUID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "addressId",
+            "required": true,
+            "in": "path",
+            "description": "Company address UUID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateCompanyAddressDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompanyDetailAddressResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed."
+          },
+          "401": {
+            "description": "JWT authentication is required."
+          },
+          "404": {
+            "description": "Company address not found."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Update an associated company address",
+        "tags": [
+          "Companies"
+        ]
+      }
+    },
+    "/companies/{companyId}/categories": {
+      "post": {
+        "operationId": "CategoriesController_create",
+        "parameters": [
+          {
+            "name": "companyId",
+            "required": true,
+            "in": "path",
+            "description": "Company UUID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCategoryDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Category created successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CategoryResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed."
+          },
+          "401": {
+            "description": "JWT authentication is required."
+          },
+          "403": {
+            "description": "Authenticated user does not have permission to create categories."
+          },
+          "404": {
+            "description": "Company not found."
+          },
+          "409": {
+            "description": "Category with the same name already exists in the company."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a category for a company",
+        "tags": [
+          "Categories"
+        ]
+      },
+      "get": {
+        "operationId": "CategoriesController_findAll",
+        "parameters": [
+          {
+            "name": "companyId",
+            "required": true,
+            "in": "path",
+            "description": "Company UUID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Company categories retrieved successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CategoryResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "JWT authentication is required."
+          },
+          "403": {
+            "description": "Authenticated user does not have access to this company."
+          },
+          "404": {
+            "description": "Company not found."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List categories for a company",
+        "tags": [
+          "Categories"
+        ]
+      }
+    },
+    "/companies/{companyId}/categories/{categoryId}": {
+      "patch": {
+        "operationId": "CategoriesController_update",
+        "parameters": [
+          {
+            "name": "companyId",
+            "required": true,
+            "in": "path",
+            "description": "Company UUID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "categoryId",
+            "required": true,
+            "in": "path",
+            "description": "Category UUID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateCategoryDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Category updated successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CategoryResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed."
+          },
+          "401": {
+            "description": "JWT authentication is required."
+          },
+          "403": {
+            "description": "Authenticated user does not have permission to update categories."
+          },
+          "404": {
+            "description": "Company or category not found."
+          },
+          "409": {
+            "description": "Category with the same name already exists in the company."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Update a category",
+        "tags": [
+          "Categories"
+        ]
+      },
+      "delete": {
+        "description": "Physically deletes a category. Only ADMIN users may delete categories, and categories with associated products cannot be deleted.",
+        "operationId": "CategoriesController_remove",
+        "parameters": [
+          {
+            "name": "companyId",
+            "required": true,
+            "in": "path",
+            "description": "Company UUID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "categoryId",
+            "required": true,
+            "in": "path",
+            "description": "Category UUID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Category deleted successfully."
+          },
+          "401": {
+            "description": "JWT authentication is required."
+          },
+          "403": {
+            "description": "Authenticated user does not have permission to delete categories."
+          },
+          "404": {
+            "description": "Company or category not found."
+          },
+          "409": {
+            "description": "Category cannot be deleted because it has associated products."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Delete a category",
+        "tags": [
+          "Categories"
+        ]
+      }
+    },
+    "/products": {
+      "post": {
+        "operationId": "ProductsController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateProductDto"
+              },
+              "examples": {
+                "normal": {
+                  "value": {
+                    "name": "Coca-Cola 350ml",
+                    "description": "Description for the product",
+                    "price": 6.5,
+                    "type": "NORMAL",
+                    "companyId": "company-id",
+                    "categoryId": "category-id"
+                  }
+                },
+                "variant": {
+                  "value": {
+                    "name": "T-Shirt",
+                    "price": 59.9,
+                    "type": "VARIANT",
+                    "companyId": "company-id",
+                    "categoryId": "category-id",
+                    "variants": [
+                      {
+                        "name": "S",
+                        "price": null
+                      },
+                      {
+                        "name": "M",
+                        "price": null
+                      }
+                    ]
+                  }
+                },
+                "variantWithPrice": {
+                  "value": {
+                    "name": "Pizza",
+                    "price": null,
+                    "type": "VARIANT_WITH_PRICE",
+                    "companyId": "company-id",
+                    "categoryId": "category-id",
+                    "variants": [
+                      {
+                        "name": "Small",
+                        "price": 30
+                      },
+                      {
+                        "name": "Medium",
+                        "price": 40
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed."
+          },
+          "401": {
+            "description": "JWT authentication is required."
+          },
+          "403": {
+            "description": "User cannot create products."
+          },
+          "404": {
+            "description": "Company or category not found."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a product for an associated company",
+        "tags": [
+          "Products"
+        ]
+      },
+      "get": {
+        "operationId": "ProductsController_findAll",
+        "parameters": [
+          {
+            "name": "companyId",
+            "required": true,
+            "in": "query",
+            "description": "Company UUID",
+            "schema": {
+              "example": "ee1c27be-d5bb-42da-a886-d4a9070077e7",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Active company products retrieved successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ProductResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "JWT authentication is required."
+          },
+          "403": {
+            "description": "Authenticated user does not have access to this company."
+          },
+          "404": {
+            "description": "Company not found."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List active products for a company",
+        "tags": [
+          "Products"
+        ]
+      }
+    },
+    "/products/{productId}": {
+      "get": {
+        "operationId": "ProductsController_findOne",
+        "parameters": [
+          {
+            "name": "productId",
+            "required": true,
+            "in": "path",
+            "description": "Product UUID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "companyId",
+            "required": true,
+            "in": "query",
+            "description": "Company UUID",
+            "schema": {
+              "example": "ee1c27be-d5bb-42da-a886-d4a9070077e7",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Active product retrieved successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed."
+          },
+          "401": {
+            "description": "JWT authentication is required."
+          },
+          "404": {
+            "description": "Company or product not found."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get an active product for an associated company",
+        "tags": [
+          "Products"
+        ]
+      },
+      "patch": {
+        "operationId": "ProductsController_update",
+        "parameters": [
+          {
+            "name": "productId",
+            "required": true,
+            "in": "path",
+            "description": "Product UUID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateProductDto"
+              },
+              "examples": {
+                "partialName": {
+                  "value": {
+                    "companyId": "company-id",
+                    "name": "Suco Natural de Laranja"
+                  }
+                },
+                "partialPrice": {
+                  "value": {
+                    "companyId": "company-id",
+                    "price": 45
+                  }
+                },
+                "partialCategory": {
+                  "value": {
+                    "companyId": "company-id",
+                    "categoryId": "new-category-id"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed."
+          },
+          "401": {
+            "description": "JWT authentication is required."
+          },
+          "403": {
+            "description": "User cannot update products."
+          },
+          "404": {
+            "description": "Company, product or category not found."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Update a product for an associated company",
+        "tags": [
+          "Products"
+        ]
+      },
+      "delete": {
+        "description": "Logically deletes a product by setting deletedAt. Related records remain in the database.",
+        "operationId": "ProductsController_remove",
+        "parameters": [
+          {
+            "name": "productId",
+            "required": true,
+            "in": "path",
+            "description": "Product UUID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeleteProductDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Product deleted successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "message": "Product deleted successfully."
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed."
+          },
+          "401": {
+            "description": "JWT authentication is required."
+          },
+          "403": {
+            "description": "User cannot delete products."
+          },
+          "404": {
+            "description": "Company or product not found."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Soft delete a product",
+        "tags": [
+          "Products"
+        ]
+      }
+    },
+    "/products/{productId}/variants": {
+      "post": {
+        "operationId": "ProductVariantsController_create",
+        "parameters": [
+          {
+            "name": "productId",
+            "required": true,
+            "in": "path",
+            "description": "Product UUID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "companyId",
+            "required": true,
+            "in": "query",
+            "description": "Company UUID",
+            "schema": {
+              "example": "company-id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateProductVariantDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductVariantResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid variant for this product."
+          },
+          "401": {
+            "description": "JWT authentication is required."
+          },
+          "403": {
+            "description": "User cannot create product variants."
+          },
+          "404": {
+            "description": "Company or product not found."
+          },
+          "409": {
+            "description": "Variant name already exists."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a variant for an associated product",
+        "tags": [
+          "Product Variants"
+        ]
+      }
+    },
+    "/products/{productId}/variants/{productId}/variants/{variantId}": {
+      "patch": {
+        "operationId": "ProductVariantsController_updateVariant",
+        "parameters": [
+          {
+            "name": "productId",
+            "required": true,
+            "in": "path",
+            "description": "Product UUID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "variantId",
+            "required": true,
+            "in": "path",
+            "description": "Product variant UUID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "companyId",
+            "required": true,
+            "in": "query",
+            "description": "Company UUID",
+            "schema": {
+              "example": "company-id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateProductVariantDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductVariantResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid variant update."
+          },
+          "401": {
+            "description": "JWT authentication is required."
+          },
+          "403": {
+            "description": "User cannot update product variants."
+          },
+          "404": {
+            "description": "Company, product or variant not found."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Partially update a product variant",
+        "tags": [
+          "Product Variants"
+        ]
+      }
+    },
+    "/products/{productId}/variants/{variantId}": {
+      "delete": {
+        "operationId": "ProductVariantsController_remove",
+        "parameters": [
+          {
+            "name": "productId",
+            "required": true,
+            "in": "path",
+            "description": "Product UUID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "variantId",
+            "required": true,
+            "in": "path",
+            "description": "Product variant UUID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "companyId",
+            "required": true,
+            "in": "query",
+            "description": "Company UUID",
+            "schema": {
+              "example": "company-id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Product variant deleted successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "message": "Product variant deleted successfully."
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "JWT authentication is required."
+          },
+          "403": {
+            "description": "User cannot delete product variants."
+          },
+          "404": {
+            "description": "Company, product or variant not found."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Physically delete a product variant",
+        "tags": [
+          "Product Variants"
+        ]
+      }
+    }
+  },
+  "info": {
+    "title": "Cartly API",
+    "description": "Cartly backend API documentation",
+    "version": "1.0",
+    "contact": {}
+  },
+  "tags": [],
+  "servers": [],
+  "components": {
+    "securitySchemes": {
+      "bearer": {
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "type": "http"
+      }
+    },
+    "schemas": {
+      "RegisterDto": {
+        "type": "object",
+        "properties": {
+          "password": {
+            "type": "string",
+            "example": "NewPassword123!",
+            "format": "password"
+          },
+          "name": {
+            "type": "string",
+            "example": "Jane Doe",
+            "description": "User display name."
+          },
+          "email": {
+            "type": "string",
+            "example": "jane@example.com"
+          }
+        },
+        "required": [
+          "password",
+          "name",
+          "email"
+        ]
+      },
+      "SafeUserResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "5f7c2d3a-4b1a-4e2f-9a6c-123456789abc"
+          },
+          "name": {
+            "type": "string",
+            "example": "Jane Doe"
+          },
+          "email": {
+            "type": "string",
+            "example": "jane@example.com"
+          },
+          "lockedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "email",
+          "lockedAt",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "LoginDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "example": "jane@example.com"
+          },
+          "password": {
+            "type": "string",
+            "example": "password",
+            "format": "password"
+          }
+        },
+        "required": [
+          "email",
+          "password"
+        ]
+      },
+      "LoginResponseDto": {
+        "type": "object",
+        "properties": {
+          "accessToken": {
+            "type": "string",
+            "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          },
+          "user": {
+            "$ref": "#/components/schemas/SafeUserResponseDto"
+          }
+        },
+        "required": [
+          "accessToken",
+          "user"
+        ]
+      },
+      "OtpDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "example": "jane@example.com"
+          },
+          "otp": {
+            "type": "string",
+            "example": "12345678",
+            "pattern": "^\\d{8}$",
+            "minLength": 8,
+            "maxLength": 8
+          }
+        },
+        "required": [
+          "email",
+          "otp"
+        ]
+      },
+      "EmailDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "example": "jane@example.com"
+          }
+        },
+        "required": [
+          "email"
+        ]
+      },
+      "GenericMessageResponseDto": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "example": "If the email is registered, a password reset OTP has been sent."
+          }
+        },
+        "required": [
+          "message"
+        ]
+      },
+      "ResetPasswordDto": {
+        "type": "object",
+        "properties": {
+          "password": {
+            "type": "string",
+            "example": "NewPassword123!",
+            "format": "password"
+          },
+          "email": {
+            "type": "string",
+            "example": "jane@example.com"
+          },
+          "otp": {
+            "type": "string",
+            "example": "12345678",
+            "pattern": "^\\d{8}$",
+            "minLength": 8,
+            "maxLength": 8
+          }
+        },
+        "required": [
+          "password",
+          "email",
+          "otp"
+        ]
+      },
+      "CompanyListResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "document": {
+            "type": "string"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "document",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "CompanyDetailAddressResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "street": {
+            "type": "string"
+          },
+          "number": {
+            "type": "string"
+          },
+          "city": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string"
+          },
+          "zipCode": {
+            "type": "string"
+          },
+          "country": {
+            "type": "string"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "street",
+          "number",
+          "city",
+          "state",
+          "zipCode",
+          "country",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "CompanyDetailsResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "document": {
+            "type": "string"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "addresses": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CompanyDetailAddressResponseDto"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "document",
+          "createdAt",
+          "updatedAt",
+          "addresses"
+        ]
+      },
+      "UpdateCompanyDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "New Company Name"
+          },
+          "document": {
+            "type": "string",
+            "example": "98765432000199"
+          }
+        }
+      },
+      "UpdateCompanyAddressDto": {
+        "type": "object",
+        "properties": {
+          "street": {
+            "type": "string",
+            "example": "Rua Nova, 500"
+          },
+          "city": {
+            "type": "string",
+            "example": "Sao Jose do Rio Preto"
+          },
+          "state": {
+            "type": "string",
+            "example": "SP"
+          },
+          "zipCode": {
+            "type": "string",
+            "example": "15000000"
+          },
+          "country": {
+            "type": "string",
+            "example": "Brazil"
+          }
+        }
+      },
+      "CreateCompanyAddressDto": {
+        "type": "object",
+        "properties": {
+          "street": {
+            "type": "string",
+            "example": "Main Street"
+          },
+          "city": {
+            "type": "string",
+            "example": "Sao Jose do Rio Preto"
+          },
+          "number": {
+            "type": "string",
+            "example": "123"
+          },
+          "state": {
+            "type": "string",
+            "example": "SP"
+          },
+          "zipCode": {
+            "type": "string",
+            "example": "15000000"
+          },
+          "country": {
+            "type": "string",
+            "example": "Brazil"
+          }
+        },
+        "required": [
+          "street",
+          "city",
+          "number",
+          "state",
+          "zipCode",
+          "country"
+        ]
+      },
+      "CreateCompanyDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "My Company"
+          },
+          "document": {
+            "type": "string",
+            "example": "12345678000199"
+          },
+          "address": {
+            "$ref": "#/components/schemas/CreateCompanyAddressDto"
+          }
+        },
+        "required": [
+          "name",
+          "document",
+          "address"
+        ]
+      },
+      "CompanyAddressResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "street": {
+            "type": "string"
+          },
+          "number": {
+            "type": "string"
+          },
+          "city": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string"
+          },
+          "zipCode": {
+            "type": "string"
+          },
+          "country": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "street",
+          "number",
+          "city",
+          "state",
+          "zipCode",
+          "country"
+        ]
+      },
+      "CompanyResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "document": {
+            "type": "string"
+          },
+          "address": {
+            "$ref": "#/components/schemas/CompanyAddressResponseDto"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "document",
+          "address",
+          "createdAt"
+        ]
+      },
+      "CreateCategoryDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "Bebidas"
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "CategoryResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "3d6d28a6-1de9-4f4b-9d7e-f4a8f9d3d2d1"
+          },
+          "name": {
+            "type": "string",
+            "example": "Bebidas"
+          },
+          "companyId": {
+            "type": "string",
+            "example": "ee1c27be-d5bb-42da-a886-d4a9070077e7"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "companyId",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "UpdateCategoryDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "New Category Name"
+          }
+        }
+      },
+      "CreateProductVariantDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "M"
+          },
+          "price": {
+            "type": "object",
+            "example": 40,
+            "nullable": true
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "CreateProductDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "Coca-Cola 350ml"
+          },
+          "description": {
+            "type": "string",
+            "example": "Description for the product"
+          },
+          "price": {
+            "type": "object",
+            "example": 6.5,
+            "nullable": true
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "NORMAL",
+              "VARIANT",
+              "VARIANT_WITH_PRICE"
+            ],
+            "example": "NORMAL"
+          },
+          "companyId": {
+            "type": "string",
+            "example": "company-id"
+          },
+          "categoryId": {
+            "type": "string",
+            "example": "category-id"
+          },
+          "variants": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CreateProductVariantDto"
+            }
+          }
+        },
+        "required": [
+          "name",
+          "type",
+          "companyId",
+          "categoryId"
+        ]
+      },
+      "ProductCategoryResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ]
+      },
+      "ProductVariantResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "productId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "price": {
+            "type": "number",
+            "nullable": true
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "productId",
+          "name",
+          "price",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "ProductImageResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "url"
+        ]
+      },
+      "ProductResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "price": {
+            "type": "object",
+            "nullable": true
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "NORMAL",
+              "VARIANT",
+              "VARIANT_WITH_PRICE"
+            ]
+          },
+          "companyId": {
+            "type": "string"
+          },
+          "categoryId": {
+            "type": "string"
+          },
+          "category": {
+            "$ref": "#/components/schemas/ProductCategoryResponseDto"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "variants": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProductVariantResponseDto"
+            }
+          },
+          "images": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProductImageResponseDto"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "description",
+          "type",
+          "companyId",
+          "categoryId",
+          "createdAt",
+          "updatedAt",
+          "variants"
+        ]
+      },
+      "UpdateProductDto": {
+        "type": "object",
+        "properties": {
+          "companyId": {
+            "type": "string",
+            "example": "company-id",
+            "description": "Company context for authorization. Required."
+          },
+          "name": {
+            "type": "string",
+            "example": "Suco Natural de Laranja"
+          },
+          "description": {
+            "type": "string",
+            "example": "Suco natural de laranja"
+          },
+          "price": {
+            "type": "object",
+            "example": 45,
+            "nullable": true
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "NORMAL",
+              "VARIANT",
+              "VARIANT_WITH_PRICE"
+            ],
+            "example": "NORMAL"
+          },
+          "categoryId": {
+            "type": "string",
+            "example": "category-id"
+          }
+        },
+        "required": [
+          "companyId"
+        ]
+      },
+      "DeleteProductDto": {
+        "type": "object",
+        "properties": {
+          "companyId": {
+            "type": "string",
+            "example": "company-id",
+            "description": "Company context for authorization. Required."
+          }
+        },
+        "required": [
+          "companyId"
+        ]
+      },
+      "UpdateProductVariantDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "Large"
+          },
+          "price": {
+            "type": "object",
+            "example": 45,
+            "nullable": true
+          }
+        }
+      }
+    }
+  }
+}

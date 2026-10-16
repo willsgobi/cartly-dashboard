@@ -1,0 +1,16 @@
+# API and implementation decisions to verify
+
+The points below are **not settled by the provided Swagger**. The implementing agent must not fill gaps by guessing.
+
+1. **Variant PATCH path malformed?** Swagger lists `PATCH /products/{productId}/variants/{productId}/variants/{variantId}` with `productId` repeated. Confirm actual controller route and update Swagger. Do not hard-code a presumed correction.
+2. **Price schemas incorrectly typed?** `CreateProductDto.price`, `UpdateProductDto.price`, `CreateProductVariantDto.price`, `UpdateProductVariantDto.price`, `ProductResponseDto.price` use `type: object`/nullable, while examples contain numbers; `ProductVariantResponseDto.price` is correctly numeric. Resolve the true number/null representation and precision before implementing pricing forms.
+3. **Missing auth lifecycle contract.** No refresh token, logout, current-user, permission listing, or session-introspection operation appears. Determine JWT lifetime and whether a backend refresh strategy exists; choose explicit session storage approach with security review.
+4. **Permissions for UI.** `LoginResponseDto.user` has no role or permission fields, and no permission endpoint is documented; confirm how active-company permissions can be retrieved for conditional navigation/actions. Never infer ADMIN merely from company ownership.
+5. **Dashboard stats, orders, customers, users and settings APIs absent.** Do not build fake integrations; label those modules pending a future Swagger snapshot. Static layout may be built only with explicit request and clearly labeled demo data.
+6. **Category detail endpoint absent.** Categories provide list, create, patch and delete; do not invent `GET /categories/{id}`. Work from list-selected data or fetch list if appropriate.
+7. **Company delete endpoint absent.** Despite general backend authorization prose, no company deletion operation is in Swagger; no Delete Company UI action that calls fabricated backend.
+8. **Images.** `ProductResponseDto.images` exists, but no upload/delete image endpoint; do not implement upload until documented.
+9. **Variant rules under updates/deletion.** The business rules require ≥1 variant for VARIANT/VARIANT_WITH_PRICE, but the API documents physical variant delete; confirm exact backend behavior when deleting the last variant.
+10. **Schema fidelity.** `UpdateCompanyAddressDto` has no `number` property, unlike create DTO; avoid exposing an update field without a corresponding contract. Some nullable/optional description and images response fields lack full explicit documentation; handle nullable and optional defensively.
+11. **Deployment details.** Determine API base URL, CORS, same-origin proxy, cookie domain, HTTPS, CSRF protections and environment configuration before choosing session architecture.
+12. **Client sorting/pagination/filtering.** List endpoints return arrays without documented pagination/search params. Implement local filtering only when task explicitly requests it; don't assume server params.
