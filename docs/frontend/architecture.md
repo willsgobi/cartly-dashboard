@@ -33,5 +33,7 @@ Route group names do not affect URL. Avoid creating folders/routes not requested
 ## Company context
 After successful login, call documented `GET /companies`. If empty, guide user to company onboarding; if one/many, choose/restore an authorized active company. Persist only non-sensitive company selection if needed. On switch: clear company-scoped caches/forms, cancel or ignore stale requests and revalidate access. Every documented company-scoped call must include companyId at its specified location, not invented URL prefixes. Never trust only client-side filtering.
 
+F06 implements this boundary in features/companies, reusing the authenticated guard's existing GET /companies result. ActiveCompanyProvider/useActiveCompany expose verified company DTOs. A session-bound HttpOnly preference is rechecked against the current list; login/logout/401 clear it. Native POST switching performs a full document navigation, and the provider keys its subtree by company ID to discard company-local state on scope changes. The protected /dashboard/onboarding route is an empty F07 navigation boundary only. See [modules/companies.md](modules/companies.md).
+
 ## Data state
 Use component state for local UI, React Hook Form for forms. A server-state library (e.g., TanStack Query) is an optional later decision after assessing complexity; do not add without a task. Separate server-side and client-side session mechanisms coherently.

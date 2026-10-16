@@ -7,7 +7,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 /** Actual browser cookie/history checks complement the production HTTP assertions. */
-export async function checkAuthBrowser(origin, { setProtectedStatus }) {
+export async function checkAuthBrowser(origin, { setProtectedStatus, setCompanies, companyFixtures }) {
   const chrome = process.env.CHROME_PATH ?? "C:/Program Files/Google/Chrome/Application/chrome.exe";
   assert(existsSync(chrome), "Set CHROME_PATH to a local Chrome/Chromium executable");
   const reservation = createServer();
@@ -140,14 +140,47 @@ export async function checkAuthBrowser(origin, { setProtectedStatus }) {
     await wait("!!document.querySelector('[name=password]') && document.readyState==='complete'");
     await signIn();
     assert.equal(await evaluate("location.search"), "", "Unsafe return URLs must fall back to the dashboard");
+
+    // F06: actual native POST switching, restored preferences and complete document isolation.
+    setCompanies(companyFixtures);
+    await navigate("Page.reload");
+    await wait("!!document.querySelector('select[name=companyId]')");
+    assert.equal(await evaluate("document.querySelector('select').value"), "");
+    const select = async (id) => {
+      await evaluate(`(()=>{const e=document.querySelector('select[name=companyId]');e.value=${JSON.stringify(id)};e.dispatchEvent(new Event('change',{bubbles:true}))})()`);
+    };
+    await select("b");
+    await click("Continuar");
+    await wait("document.querySelector('[role=status]')?.textContent==='Empresa b'");
+    assert((await send("Storage.getCookies")).cookies.some((cookie) => cookie.name === "__Host-cartly_company" && cookie.httpOnly && cookie.secure));
+    await navigate("Page.reload");
+    assert.equal(await evaluate("document.querySelector('select').value"), "b", "Verified preference must restore after refresh");
+    await evaluate("window.companySpecificCachedData='old-company-b'");
+    await select("a");
+    await click("Trocar empresa");
+    await wait("document.querySelector('[role=status]')?.textContent==='Empresa a'");
+    assert(await evaluate("window.companySpecificCachedData===undefined"), "Full navigation must discard the previous company cache");
+    setCompanies([companyFixtures[1]]);
+    await navigate("Page.reload");
+    await wait("document.querySelector('[role=status]')?.textContent==='Empresa b'");
+    assert.equal(await evaluate("!!document.querySelector('select')"), false, "Single accessible company is automatic");
+    setCompanies([]);
+    await navigate("Page.reload");
+    await wait("location.pathname==='/dashboard/onboarding' && document.body.innerText.includes('Nenhuma empresa disponível')");
+    assert.equal(await evaluate("!!document.querySelector('input')"), false, "F07 creation form must not be implemented");
     await click("Sair");
     await wait("location.pathname==='/login' && !!document.querySelector('[name=password]')");
+    assert(!(await send("Storage.getCookies")).cookies.some((cookie) => cookie.name === "__Host-cartly_company"), "Logout clears the company preference");
+    setCompanies(companyFixtures);
+    await signIn();
+    assert.equal(await evaluate("document.querySelector('select').value"), "", "A new session must not inherit a company choice");
     for (const width of [320, 390, 768, 1280]) {
       await send("Emulation.setDeviceMetricsOverride", { width, height: 1000, deviceScaleFactor: 1, mobile: width < 640 });
       assert(await evaluate("document.documentElement.scrollWidth<=innerWidth"), `Overflow at ${width}px`);
     }
     assert(urls.every((url) => !url.includes("synthetic-password") && !url.includes("synthetic-wrong")), "Passwords must not enter URLs");
     assert.deepEqual(errors, [], "No browser JavaScript exceptions");
+    console.log("PASS browser companies: zero/one/multiple companies, native selection/switch, refresh restoration, removal, document cache reset, onboarding boundary, logout/new-session isolation");
     console.log("PASS browser auth: login UI, invalid credentials, HttpOnly/Secure cookie, return URLs, refresh, protected access, 401 cleanup, 403 preservation, logout, history isolation, responsive layout");
   } finally {
     setProtectedStatus(200);

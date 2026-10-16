@@ -6,7 +6,7 @@ The user explicitly authorized a Next.js BFF with a server-managed HttpOnly cook
 
 The production cookie is `__Host-cartly_session` (`cartly_session` in development): HttpOnly, Secure in production, SameSite=Lax, Path=/, no Domain. Host-only scope covers dashboard and BFF endpoints. Expires/Max-Age are bounded by numeric JWT exp, rounded down; reads do not renew the cookie. Invalid, expired, unsigned alg=none, oversized (>3800 characters), or missing-exp tokens are rejected rather than receiving an invented lifetime. This is a fail-closed frontend cookie policy, not an OpenAPI correction. Supporting a backend token without exp requires an explicit lifetime contract.
 
-Decoding exp only permits early rejection; it never verifies signatures or grants access. Before rendering protected content, requireDashboardAccess calls the documented bearer-protected GET /companies, validates its response and discards company data. This is an authentication probe, not a company feature or an invented introspection service. It adds one backend read per protected render and should be revisited if a real introspection endpoint is documented. 403 yields an access-denied state without logout; other upstream failures withhold content without destroying the session. No roles or permissions are inferred.
+Decoding exp only permits early rejection; it never verifies signatures or grants access. Before rendering protected content, requireDashboardAccess calls the documented bearer-protected GET /companies and validates its response. F06 now retains the decoded list in the authenticated server result for company selection, avoiding a duplicate request. The local session JSON endpoint still exposes no company data. This adds one backend read per protected render; no introspection service, role or permission is invented. 403 yields an access-denied state without logout; other upstream failures withhold content without destroying the session.
 
 ## Local endpoint contracts
 
@@ -17,6 +17,7 @@ These routes belong to Next.js, not NestJS:
 | POST /api/auth/login | Same-origin JSON `{ email, password, returnTo? }` | 200 `{ user, returnTo }` and cookie; safe normalized error otherwise |
 | POST /api/auth/logout | Same-origin POST; no body required | Cookie deletion and 303 to /login; no upstream logout |
 | GET /api/auth/session | Cookie only; optional returnTo for error navigation | 200 `{ authenticated: true }`; 401 clears cookie and includes safe redirectTo; other errors preserve status/session |
+| POST /api/companies/active | Same-origin form `{ companyId }` | Revalidated membership; session-bound preference cookie and 303 to dashboard; safe form-error redirect otherwise |
 
 Login reads at most 16 KiB from the request stream and validates incoming fields with Zod. Passwords are not trimmed or given registration constraints. F02 calls POST /auth/login; Zod validates all LoginResponseDto/SafeUserResponseDto fields and strips unknown fields. Only the safe user DTO and a validated return destination are serialized. Invalid credentials receive HTTP 401 and `E-mail ou senha inválidos.` A successful upstream response with an unusable JWT produces 502 and no cookie. Error diagnostics and validation inputs are never returned to users.
 
@@ -26,7 +27,7 @@ For authenticated JSON fetch consumers, handle 401 by navigating to the returned
 
 ## Protected rendering and invalidation
 
-Next.js 16 proxy.ts matches /dashboard/:path* and /login. Missing cookies redirect to login; locally invalid/expired cookies are removed on the redirect. The normal dashboard check is optimistic; protected data/rendering must still check backend acceptance. /dashboard is only a session scaffold with logout and denied/unavailable states, not an administrative feature screen. Future protected pages and data operations must use the server boundary themselves: a shared layout or Proxy alone is insufficient.
+Next.js 16 proxy.ts matches /dashboard/:path* and /login. Missing cookies redirect to login; locally invalid/expired cookies are removed on the redirect. The normal dashboard check is optimistic; protected data/rendering must still check backend acceptance. /dashboard now includes F06 company selection; /dashboard/onboarding is only a protected empty navigation boundary for F07. Future protected pages and data operations must use the server boundary themselves: a shared layout or Proxy alone is insufficient.
 
 Server Components cannot mutate cookies. Their backend 401 redirects to /login?reason=expired with a safe return path; Proxy on that destination clears an invalid cookie. A still-live token is rechecked against the backend before removal so crafted URLs/stale redirects cannot log out a valid/new session. This bounded cleanup verification never retries login, renews tokens or replays mutations. 403/network/server failures during cleanup do not remove a valid-looking cookie. The login shell does not redirect back, preventing loops, and displays the pt-BR expiration message. If the browser already removed an expired cookie, the ordinary missing-session login path is used.
 
@@ -37,6 +38,8 @@ Cache Components remain enabled. Dynamic session reads use Suspense with a non-s
 The server rendering guard explicitly awaits connection() before reading the session or checking JWT expiry. With partial prefetching, cookies can already be available during runtime prerendering, which does not permit an unstable Date.now() read. This request-time boundary keeps expiry current and avoids the blocking-prerender-current-time error; session results and the clock are never cached. The existing Suspense boundary still provides the non-sensitive shell.
 
 Local logout deletes the browser cookie; the underlying JWT remains valid at NestJS until expiration. No undocumented logout, current-user, refresh or permission endpoint is called.
+
+F06 also clears the company preference on successful login, logout and session invalidation. The server binds the untrusted HttpOnly preference to the current session and checks it against the accessible company list on restoration. It never grants authorization. Full document switching discards prior company state; see [modules/companies.md](modules/companies.md).
 
 ## Configuration and security
 
@@ -58,4 +61,4 @@ F05 additionally provides npm run test:auth:browser, which runs the production H
 
 F05 live local NestJS checks confirmed invalid credentials, unauthenticated access, forged future JWTs and expired synthetic JWTs return 401; the actual local BFF returned 401 for invalid credentials and 303 for unauthenticated dashboard access. No activated test-account credentials were provided: successful real-NestJS login/protected access/persistence/logout remain a manual integration check. Passing the isolated production/browser suite is not a claim of positive real-backend verification.
 
-The implementation follows the official [Next.js authentication guide](https://nextjs.org/docs/app/guides/authentication), [Proxy convention](https://nextjs.org/docs/app/api-reference/file-conventions/proxy) and [BFF guide](https://nextjs.org/docs/app/guides/backend-for-frontend). Actual deployment URLs and HTTPS are operator configuration; backend permission discovery remains unresolved. F05 supplies the login form; company selection remains F06 work.
+The implementation follows the official [Next.js authentication guide](https://nextjs.org/docs/app/guides/authentication), [Proxy convention](https://nextjs.org/docs/app/api-reference/file-conventions/proxy) and [BFF guide](https://nextjs.org/docs/app/guides/backend-for-frontend). Actual deployment URLs and HTTPS are operator configuration; backend permission discovery remains unresolved. F05 supplies login and F06 supplies company selection; the F07 creation form remains unimplemented.

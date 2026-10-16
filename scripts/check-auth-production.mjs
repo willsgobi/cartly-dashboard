@@ -15,6 +15,10 @@ const jwt = (exp, sub = "test-user") => [
 ].join(".");
 const token = jwt(Math.floor(Date.now() / 1000) + 300);
 let protectedStatus = 200;
+const companyFixtures = ["a", "b"].map((id) => ({
+  id, name: `Empresa ${id}`, document: id, createdAt: "2026-10-16T12:00:00Z", updatedAt: "2026-10-16T12:00:00Z",
+}));
+let accessibleCompanies = [companyFixtures[0]];
 const upstreamPaths = [];
 const backend = createServer(async (request, response) => {
   upstreamPaths.push(request.url);
@@ -30,7 +34,7 @@ const backend = createServer(async (request, response) => {
     }
   } else if (request.url === "/companies" && request.method === "GET") {
     const status = request.headers.authorization === `Bearer ${token}` ? protectedStatus : 401;
-    response.writeHead(status).end(JSON.stringify(status === 200 ? [] : { message: "private diagnostic" }));
+    response.writeHead(status).end(JSON.stringify(status === 200 ? accessibleCompanies : { message: "private diagnostic" }));
   } else {
     response.writeHead(404).end("{}");
   }
@@ -94,6 +98,7 @@ try {
     assert(cookie.includes(flag), "Missing cookie security attribute");
   }
   assert.match(response.headers.get("cache-control"), /no-store/);
+
   const loginBody = await response.text();
   assert(!loginBody.includes(token) && !loginBody.includes("synthetic-password"));
   assert.deepEqual(JSON.parse(loginBody), { user: safeUser, returnTo: "/dashboard" });
@@ -104,6 +109,14 @@ try {
   assert(protectedHtml.includes("Área protegida"), "Valid session must reach the protected scaffold");
   assert(!protectedHtml.includes(token), "JWT must not reach HTML/RSC payloads");
   assert.match(response.headers.get("cache-control"), /no-store/);
+
+  accessibleCompanies = [];
+  response = await request("/dashboard", { headers: { Cookie: cookieHeader } });
+  assert((await response.text()).includes("/dashboard/onboarding"), "No companies must lead to onboarding boundary");
+  response = await request("/dashboard/onboarding", { headers: { Cookie: cookieHeader } });
+  assert((await response.text()).includes("Nenhuma empresa disponível"));
+  assert.equal((await request("/dashboard/onboarding")).status, 303);
+  accessibleCompanies = [companyFixtures[0]];
 
   const forgedCookie = `__Host-cartly_session=${jwt(Math.floor(Date.now() / 1000) + 300, "forged")}`;
   response = await request("/dashboard", { headers: { Cookie: forgedCookie } });
@@ -140,7 +153,11 @@ try {
   assert.equal((await request("/dashboard")).status, 303);
   if (process.argv.includes("--browser")) {
     const { checkAuthBrowser } = await import("./check-auth-browser.mjs");
-    await checkAuthBrowser(origin, { setProtectedStatus: (status) => { protectedStatus = status; } });
+    await checkAuthBrowser(origin, {
+      setProtectedStatus: (status) => { protectedStatus = status; },
+      setCompanies: (companies) => { accessibleCompanies = companies; },
+      companyFixtures,
+    });
   }
   assert(upstreamPaths.every((path) => path === "/auth/login" || path === "/companies"));
   console.log("PASS production auth: login, secure cookies, CSRF, GET 405, protected SSR, forged/expired JWT, 401 cleanup, 403 preservation, no-store, no token leakage, logout");

@@ -54,7 +54,7 @@ describe("server rendering boundary", () => {
   });
   it("returns protected access only after a successful backend probe", async () => {
     getCookie.mockReturnValue({ value: testJwt() });
-    await expect(requireDashboardAccess()).resolves.toEqual({ kind: "authenticated" });
+    await expect(requireDashboardAccess()).resolves.toEqual({ kind: "authenticated", companies: [] });
     expect(fetch).toHaveBeenCalledOnce();
   });
   it("returns an access-denied state on 403 without redirecting", async () => {

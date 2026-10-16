@@ -5,6 +5,7 @@ import { ApiError } from "../api/errors";
 import type { ApiPath, ApiRequestOptions, ApiSuccessBody, HttpMethod, ResponseDecoder } from "../api/types";
 import { requireSessionToken, SessionError } from "./session";
 import { decodeSessionProbe } from "./schemas";
+import type { Company } from "../api/companies";
 
 type AuthOptions<Method extends HttpMethod, Path extends ApiPath<Method>> =
   ApiRequestOptions<Method, Path> & { token?: never };
@@ -29,7 +30,7 @@ export async function authenticatedRequest<Method extends HttpMethod, Path exten
 }
 
 export type SessionAccess =
-  | { kind: "authenticated" }
+  | { kind: "authenticated"; companies: Company[] }
   | { kind: "unauthenticated"; expired: boolean }
   | { kind: "denied"; error: ApiError }
   | { kind: "unavailable"; error: ApiError };
@@ -39,7 +40,7 @@ export async function checkSessionAccess(token: string | undefined, signal?: Abo
   try {
     const result = await authenticatedRequest(token, "GET", "/companies", { signal, decode: decodeSessionProbe });
     if (result === undefined) throw new ApiError("invalid-response");
-    return { kind: "authenticated" };
+    return { kind: "authenticated", companies: result };
   } catch (error) {
     if (error instanceof ApiError && error.status === 401) {
       return { kind: "unauthenticated", expired: !(error instanceof SessionError && error.reason === "missing") };

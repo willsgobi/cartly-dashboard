@@ -7,6 +7,7 @@ import { checkSessionAccess } from "./authenticated-api";
 import { loginInputSchema, decodeLoginResponse } from "./schemas";
 import { clearSessionCookie, SessionError, sessionCookieName, setSessionCookie } from "./session";
 import { assertSameOrigin, loginLocation, loginRedirect, noStore, safeReturnTo } from "./security";
+import { clearCompanySelection } from "../companies/selection";
 
 function errorResponse(error: unknown, login = false, redirectTo?: string): NextResponse {
   const failure = error instanceof ApiError ? error : new ApiError("invalid-response");
@@ -76,6 +77,7 @@ export async function handleLogin(request: NextRequest): Promise<NextResponse> {
     if (!result) throw new ApiError("invalid-response");
     const response = noStore(NextResponse.json({ user: result.user, returnTo: safeReturnTo(returnTo) }));
     setSessionCookie(response, result.accessToken);
+    clearCompanySelection(response);
     return response;
   } catch (error) {
     return errorResponse(error, true);

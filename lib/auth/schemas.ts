@@ -1,6 +1,7 @@
 import "server-only";
 import { z } from "zod";
 import type { components } from "../api/generated/schema";
+import { decodeCompanyList } from "../api/companies";
 
 export const loginInputSchema = z.object({
   email: z.email(),
@@ -32,12 +33,4 @@ export function decodeLoginResponse(value: unknown): components["schemas"]["Logi
   return loginResponseSchema.parse(value);
 }
 
-const companyListSchema = z.array(z.object({
-  id: z.string(), name: z.string(), document: z.string(),
-  createdAt: z.string(), updatedAt: z.string(),
-}));
-
-/** Authentication probe only; F03 does not expose or persist company data. */
-export function decodeSessionProbe(value: unknown): components["schemas"]["CompanyListResponseDto"][] {
-  return companyListSchema.parse(value);
-}
+export const decodeSessionProbe = decodeCompanyList;

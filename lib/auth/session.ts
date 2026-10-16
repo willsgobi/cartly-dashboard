@@ -1,6 +1,7 @@
 import "server-only";
 import type { NextResponse } from "next/server";
 import { ApiError } from "../api/errors";
+import { clearCompanySelection } from "../companies/selection";
 
 export class SessionError extends ApiError {
   constructor(readonly reason: "missing" | "expired" | "invalid") {
@@ -66,6 +67,7 @@ export function setSessionCookie(response: NextResponse, token: string): void {
 }
 
 export function clearSessionCookie(response: NextResponse): void {
+  clearCompanySelection(response);
   response.cookies.set(sessionCookieName(), "", {
     ...cookieOptions(), maxAge: 0, expires: new Date(0),
   });

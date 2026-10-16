@@ -1,0 +1,30 @@
+.workspace,
+.form {
+  display: grid;
+  min-width: 0;
+  gap: var(--space-4);
+  overflow-wrap: anywhere;
+}
+
+.workspace h2 {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+}
+
+.form label { font-weight: var(--font-weight-medium); }
+
+.form select {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  padding: var(--space-3);
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-input);
+  font: inherit;
+}
+
+.form select:focus-visible { outline: 2px solid var(--color-primary-dark); outline-offset: 2px; }
+.form select:disabled { opacity: 0.6; cursor: wait; }
+.error { color: var(--color-danger-text); }
