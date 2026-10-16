@@ -1,0 +1,151 @@
+import assert from "node:assert/strict";
+import { createServer } from "node:http";
+import { once } from "node:events";
+import { spawn } from "node:child_process";
+
+// Loopback-only NestJS mock. All credentials/tokens are synthetic test fixtures.
+const safeUser = {
+  id: "test-user", name: "Pessoa de teste", email: "test@example.com", lockedAt: null,
+  createdAt: "2026-10-16T12:00:00Z", updatedAt: "2026-10-16T12:00:00Z",
+};
+const jwt = (exp, sub = "test-user") => [
+  Buffer.from(JSON.stringify({ alg: "HS256", typ: "JWT" })).toString("base64url"),
+  Buffer.from(JSON.stringify({ exp, sub })).toString("base64url"),
+  Buffer.from("synthetic-test-signature").toString("base64url"),
+].join(".");
+const token = jwt(Math.floor(Date.now() / 1000) + 300);
+let protectedStatus = 200;
+const upstreamPaths = [];
+const backend = createServer(async (request, response) => {
+  upstreamPaths.push(request.url);
+  response.setHeader("Content-Type", "application/json");
+  if (request.url === "/auth/login" && request.method === "POST") {
+    let body = "";
+    for await (const chunk of request) body += chunk;
+    const input = JSON.parse(body);
+    if (input.email === safeUser.email && input.password === "synthetic-password") {
+      response.end(JSON.stringify({ accessToken: token, user: safeUser }));
+    } else {
+      response.writeHead(401).end(JSON.stringify({ message: "private diagnostic" }));
+    }
+  } else if (request.url === "/companies" && request.method === "GET") {
+    const status = request.headers.authorization === `Bearer ${token}` ? protectedStatus : 401;
+    response.writeHead(status).end(JSON.stringify(status === 200 ? [] : { message: "private diagnostic" }));
+  } else {
+    response.writeHead(404).end("{}");
+  }
+});
+
+let app;
+let output = "";
+try {
+  backend.listen(0, "127.0.0.1");
+  await once(backend, "listening");
+  const backendAddress = backend.address();
+  assert(backendAddress && typeof backendAddress === "object");
+  const portReservation = createServer();
+  portReservation.listen(0, "127.0.0.1");
+  await once(portReservation, "listening");
+  const appAddress = portReservation.address();
+  assert(appAddress && typeof appAddress === "object");
+  await new Promise((resolve) => portReservation.close(resolve));
+  const origin = `http://127.0.0.1:${appAddress.port}`;
+  app = spawn(process.execPath, ["node_modules/next/dist/bin/next", "start", "--hostname", "127.0.0.1", "--port", String(appAddress.port)], {
+    windowsHide: true,
+    env: { ...process.env, NODE_ENV: "production", APP_ORIGIN: origin, API_BASE_URL: `http://127.0.0.1:${backendAddress.port}` },
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  for (const stream of [app.stdout, app.stderr]) stream.on("data", (chunk) => { output = (output + chunk).slice(-6000); });
+  let ready = false;
+  for (let attempt = 0; attempt < 150; attempt++) {
+    try {
+      const response = await fetch(origin);
+      if (response.ok) { ready = true; break; }
+    } catch { /* Wait for the local production server only. */ }
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+  assert(ready, "Production server did not become ready");
+  const request = (path, init = {}) => fetch(origin + path, { redirect: "manual", ...init });
+  const cookieHeader = `__Host-cartly_session=${token}`;
+
+  let response = await request("/dashboard");
+  assert.equal(response.status, 303);
+  assert.equal(new URL(response.headers.get("location"), origin).pathname, "/login");
+  assert(!(await response.text()).includes("Área protegida"));
+
+  for (const path of ["/api/auth/login", "/api/auth/logout"]) {
+    assert.equal((await request(path)).status, 405, "State changes must not accept GET");
+    response = await request(path, { method: "POST", headers: { Origin: "https://evil.test" } });
+    assert.equal(response.status, 403);
+    assert(!response.headers.has("set-cookie"));
+  }
+
+  response = await request("/api/auth/login", {
+    method: "POST", headers: { Origin: origin, "Content-Type": "application/json" },
+    body: JSON.stringify({ email: safeUser.email, password: "synthetic-password", returnTo: "https://evil.test" }),
+  });
+  assert.equal(response.status, 200);
+  const cookie = response.headers.get("set-cookie") ?? "";
+  for (const flag of ["__Host-cartly_session=", "HttpOnly", "Secure", "SameSite=lax", "Path=/"]) {
+    assert(cookie.includes(flag), "Missing cookie security attribute");
+  }
+  assert.match(response.headers.get("cache-control"), /no-store/);
+  const loginBody = await response.text();
+  assert(!loginBody.includes(token) && !loginBody.includes("synthetic-password"));
+  assert.deepEqual(JSON.parse(loginBody), { user: safeUser, returnTo: "/dashboard" });
+
+  response = await request("/dashboard", { headers: { Cookie: cookieHeader } });
+  assert.equal(response.status, 200);
+  const protectedHtml = await response.text();
+  assert(protectedHtml.includes("Área protegida"), "Valid session must reach the protected scaffold");
+  assert(!protectedHtml.includes(token), "JWT must not reach HTML/RSC payloads");
+  assert.match(response.headers.get("cache-control"), /no-store/);
+
+  const forgedCookie = `__Host-cartly_session=${jwt(Math.floor(Date.now() / 1000) + 300, "forged")}`;
+  response = await request("/dashboard", { headers: { Cookie: forgedCookie } });
+  const invalidHtml = await response.text();
+  assert(!invalidHtml.includes("Área protegida"), "Forged claims cannot authorize protected rendering");
+  assert(response.status === 303 || invalidHtml.includes("/login?"), "Server rendering must redirect invalid sessions");
+  response = await request("/login?reason=expired", { headers: { Cookie: forgedCookie } });
+  assert.match(response.headers.get("set-cookie"), /Max-Age=0/);
+  assert((await response.text()).includes("Sua sessão expirou"));
+
+  response = await request("/api/auth/session", { headers: { Cookie: forgedCookie } });
+  assert.equal(response.status, 401);
+  assert.match(response.headers.get("set-cookie"), /Max-Age=0/);
+  assert.equal((await response.json()).error.status, 401);
+
+  protectedStatus = 403;
+  response = await request("/api/auth/session", { headers: { Cookie: cookieHeader } });
+  assert.equal(response.status, 403);
+  assert(!response.headers.has("set-cookie"), "403 must not clear a session");
+  response = await request("/dashboard", { headers: { Cookie: cookieHeader } });
+  const deniedHtml = await response.text();
+  assert(deniedHtml.includes("Acesso negado") && !deniedHtml.includes("Área protegida"));
+  assert(!response.headers.has("set-cookie"));
+  protectedStatus = 200;
+
+  response = await request("/dashboard", { headers: { Cookie: `__Host-cartly_session=${jwt(1)}` } });
+  assert.equal(response.status, 303);
+  assert.match(response.headers.get("set-cookie"), /Max-Age=0/);
+
+  response = await request("/api/auth/logout", { method: "POST", headers: { Origin: origin, Cookie: cookieHeader } });
+  assert.equal(response.status, 303);
+  assert.match(response.headers.get("set-cookie"), /Max-Age=0/);
+  assert.equal(new URL(response.headers.get("location"), origin).pathname, "/login");
+  assert.equal((await request("/dashboard")).status, 303);
+  assert(upstreamPaths.every((path) => path === "/auth/login" || path === "/companies"));
+  console.log("PASS production auth: login, secure cookies, CSRF, GET 405, protected SSR, forged/expired JWT, 401 cleanup, 403 preservation, no-store, no token leakage, logout");
+} catch (error) {
+  console.error(error);
+  if (output) console.error(output);
+  process.exitCode = 1;
+} finally {
+  if (app) {
+    const stopped = once(app, "exit");
+    app.kill();
+    await stopped;
+  }
+  backend.closeAllConnections();
+  await new Promise((resolve) => backend.close(resolve));
+}

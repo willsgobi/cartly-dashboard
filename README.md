@@ -2,19 +2,21 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 ## Getting Started
 
-First, run the development server:
+First, create the local environment file (PowerShell):
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+```powershell
+Copy-Item .env.example .env.local
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Next.js does not load `.env.example`. In `.env.local`, set `API_BASE_URL` to the NestJS API URL and `APP_ORIGIN` to the exact dashboard origin, including its port. The local example uses the API on `http://localhost:3000` and the dashboard on `http://localhost:3001`. Keep `.env.local` untracked; production hosting must provide its own values and HTTPS. See [session configuration](docs/frontend/session-management.md#configuration-and-security).
+
+Then run the development server on the configured dashboard port:
+
+```bash
+npm run dev -- --port 3001
+```
+
+Open [http://localhost:3001](http://localhost:3001) with your browser to see the result. If you use another port or hostname, update `APP_ORIGIN` accordingly. Restart the development server if it has not reloaded changes to `.env.local`.
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 

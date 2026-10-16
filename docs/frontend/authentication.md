@@ -9,8 +9,8 @@
 - `POST /auth/reset-password` → `ResetPasswordDto` (`email`, eight-digit `otp`, `password`) → 200.
 - Protected operations use OpenAPI `bearer` JWT security.
 
-## Session design — decision required before coding
-The API returns an `accessToken` in JSON; OpenAPI does **not** specify refresh, logout, current-user/session introspection, or cookie endpoints. Do NOT invent them or claim persistent refresh sessions. Preferred architecture to assess: browser posts credentials to a Next.js server-side route handler, which calls the API and stores the access token in a `Secure`, `HttpOnly`, `SameSite` cookie, with server-to-API forwarding and CSRF protections where relevant. This is a frontend architecture option, NOT confirmed existing API behavior. Review deployment topology, CORS, caching, cookie domain, HTTPS and CSRF before implementing. Avoid `localStorage` for long-lived tokens. If purely client-side bearer-token design is chosen, explicitly document XSS and reload/session tradeoffs.
+## Session design — F03 decision
+The F03 request explicitly authorizes an HttpOnly-cookie BFF and confirms there are no refresh tokens. The implemented decision, endpoint contracts, expiration policy, CSRF controls and verification commands are documented in [session-management.md](session-management.md). NestJS remains the token-validity and authorization authority. No backend introspection/logout operation, browser token storage or refresh flow is invented. The complete login UI and company-context flow remain future tasks.
 
 ## Guards and errors
 - Protect the dashboard server-side wherever feasible; handle 401 by invalidating the local session and prompting login, without loops.

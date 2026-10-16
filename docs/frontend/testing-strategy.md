@@ -1,10 +1,13 @@
 # Testing strategy
 
-## Recommended tools (not yet installed)
-- Vitest + React Testing Library + `@testing-library/user-event` + jest-dom matchers for logic, forms and components.
-- MSW (optional) to mock API at network boundary using **actual documented** contracts.
-- Playwright for critical end-to-end flows, preferably with a controlled test API environment.
+## Tools
+- Vitest is installed for API unit tests in F02; run with npm test. Type-level assertions and negative compile-time examples also require npx tsc --noEmit --incremental false.
+- React Testing Library, `@testing-library/user-event` and jsdom are installed for F04 form tests. Tests use Vitest assertions; jest-dom is not installed. npm test includes features/**/*.test.ts and features/**/*.test.tsx; component files use the jsdom environment.
+- MSW (optional, not installed) to mock API at network boundary using **actual documented** contracts.
+- Playwright (not installed) for critical end-to-end flows, preferably with a controlled test API environment.
 - TypeScript, ESLint and Next.js build for static checks.
+- F03 adds mocked auth tests and npm run test:auth:production (after npm run build), which starts/stops a local production Next.js server and isolated mock API to verify protected rendering and cookie/CSRF behavior without contacting a real backend.
+- F04 tests mock the Server Action boundary in form tests and native Fetch in action tests. They cover required/email/password confirmation/OTP validation, paste and leading zeros, DTO stripping, errors, safe messages, loading, duplicate submissions and navigation. Actual backend checks use only invalid/missing payloads or an unknown synthetic email; successful mailbox/OTP verification requires a controlled test account.
 
 ## Test pyramid
 - Unit: formatters, schema refinements (NORMAL/VARIANT/VARIANT_WITH_PRICE), company-scoped query builders, error mapping.

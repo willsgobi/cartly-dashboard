@@ -1,0 +1,42 @@
+.form,
+.fields {
+  display: grid;
+  min-width: 0;
+  gap: var(--space-6);
+}
+
+.fields {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.error {
+  color: var(--color-danger-text);
+  overflow-wrap: anywhere;
+}
+
+.success {
+  color: var(--color-primary-dark);
+  overflow-wrap: anywhere;
+}
+
+.hint,
+.navigation {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.navigation {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.legend {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
