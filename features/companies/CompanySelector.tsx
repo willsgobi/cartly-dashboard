@@ -8,7 +8,7 @@ import { useActiveCompany } from "./ActiveCompanyContext";
 import { companySelectionSchema, type CompanySelectionValues } from "./schemas";
 import styles from "./companies.module.scss";
 
-export function CompanySelector() {
+export function CompanySelector({ compact = false }: { compact?: boolean }) {
   const { companies, activeCompany } = useActiveCompany();
   const id = useId();
   const inFlight = useRef(false);
@@ -16,11 +16,12 @@ export function CompanySelector() {
   const { register, handleSubmit, formState: { errors } } = useForm<CompanySelectionValues>({
     resolver: zodResolver(companySelectionSchema), defaultValues: { companyId: activeCompany?.id ?? "" },
   });
+  if (!companies.length) return <p className={styles.noCompany}>Nenhuma empresa selecionada</p>;
   return (
-    <section className={styles.workspace} aria-label="Empresas">
+    <section className={[styles.workspace, compact ? styles.compact : ""].filter(Boolean).join(" ")} aria-label="Empresas">
       <h2>{activeCompany ? "Empresa ativa" : "Selecione sua empresa"}</h2>
       {activeCompany && <p role="status">{activeCompany.name}</p>}
-      {companies.length === 1 ? <p>Esta é a empresa disponível para sua conta.</p> : (
+      {companies.length === 1 ? (!compact && <p>Esta é a empresa disponível para sua conta.</p>) : (
         <form action="/api/companies/active" method="post" noValidate aria-busy={submitting} onSubmit={(event) => {
           const form = event.currentTarget;
           void handleSubmit(() => {

@@ -4,6 +4,7 @@ import { authenticatedErrorResponse, handleLogin, handleLogout, handleSession } 
 import { ApiError } from "../api/errors";
 import { sessionCookieName } from "./session";
 import { companyCookieName } from "../companies/selection";
+import { displayUserCookieName, readDisplayUser } from "./display-user";
 import { appOrigin, credentials, safeUser, testJwt } from "./__tests__/fixtures";
 
 vi.mock("server-only", () => ({}));
@@ -33,6 +34,7 @@ describe("BFF login", () => {
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ user: safeUser, returnTo: "/dashboard?view=summary" });
     expect(response.cookies.get(sessionCookieName())?.value).toBe(token);
+    expect(readDisplayUser(token, response.cookies.get(displayUserCookieName())?.value)).toEqual({ name: safeUser.name, email: safeUser.email });
     expect(response.cookies.get(companyCookieName())).toMatchObject({ value: "", maxAge: 0 });
     expect(response.headers.get("cache-control")).toContain("no-store");
     const [url, init] = vi.mocked(fetch).mock.calls[0];

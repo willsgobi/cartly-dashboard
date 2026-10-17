@@ -49,7 +49,7 @@ export async function handleLogin(request: NextRequest): Promise<NextResponse> {
     });
     if (!result) throw new ApiError("invalid-response");
     const response = noStore(NextResponse.json({ user: result.user, returnTo: safeReturnTo(returnTo) }));
-    setSessionCookie(response, result.accessToken);
+    setSessionCookie(response, result.accessToken, result.user);
     clearCompanySelection(response);
     return response;
   } catch (error) {

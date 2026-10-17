@@ -93,7 +93,7 @@ try {
   let response = await request("/dashboard");
   assert.equal(response.status, 303);
   assert.equal(new URL(response.headers.get("location"), origin).pathname, "/login");
-  assert(!(await response.text()).includes("Área protegida"));
+  assert(!(await response.text()).includes("Visão geral do dashboard"));
 
   for (const path of ["/api/auth/login", "/api/auth/logout"]) {
     assert.equal((await request(path)).status, 405, "State changes must not accept GET");
@@ -117,10 +117,12 @@ try {
   assert(!loginBody.includes(token) && !loginBody.includes("synthetic-password"));
   assert.deepEqual(JSON.parse(loginBody), { user: safeUser, returnTo: "/dashboard" });
 
+  const companyReads = upstreamPaths.filter((path) => path === "/companies").length;
   response = await request("/dashboard", { headers: { Cookie: cookieHeader } });
   assert.equal(response.status, 200);
   const protectedHtml = await response.text();
-  assert(protectedHtml.includes("Área protegida"), "Valid session must reach the protected scaffold");
+  assert(protectedHtml.includes("Visão geral do dashboard"), "Valid session must reach the protected dashboard");
+  assert.equal(upstreamPaths.filter((path) => path === "/companies").length - companyReads, 1, "Layout and page must share one request-scoped access check");
   assert(!protectedHtml.includes(token), "JWT must not reach HTML/RSC payloads");
   assert.match(response.headers.get("cache-control"), /no-store/);
 
@@ -135,7 +137,7 @@ try {
   const forgedCookie = `__Host-cartly_session=${jwt(Math.floor(Date.now() / 1000) + 300, "forged")}`;
   response = await request("/dashboard", { headers: { Cookie: forgedCookie } });
   const invalidHtml = await response.text();
-  assert(!invalidHtml.includes("Área protegida"), "Forged claims cannot authorize protected rendering");
+  assert(!invalidHtml.includes("Visão geral do dashboard"), "Forged claims cannot authorize protected rendering");
   assert(response.status === 303 || invalidHtml.includes("/login?"), "Server rendering must redirect invalid sessions");
   response = await request("/login?reason=expired", { headers: { Cookie: forgedCookie } });
   assert.match(response.headers.get("set-cookie"), /Max-Age=0/);
@@ -152,7 +154,7 @@ try {
   assert(!response.headers.has("set-cookie"), "403 must not clear a session");
   response = await request("/dashboard", { headers: { Cookie: cookieHeader } });
   const deniedHtml = await response.text();
-  assert(deniedHtml.includes("Acesso negado") && !deniedHtml.includes("Área protegida"));
+  assert(deniedHtml.includes("Acesso negado") && !deniedHtml.includes("Visão geral do dashboard"));
   assert(!response.headers.has("set-cookie"));
   protectedStatus = 200;
 

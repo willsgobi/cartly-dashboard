@@ -1,40 +1,37 @@
-import Link from "next/link";
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { Button } from "../../components/ui/Button";
-import { requireDashboardAccess } from "../../lib/auth/guard";
-import { sessionCookieName } from "../../lib/auth/session";
-import { companyCookieName, resolveActiveCompany } from "../../lib/companies/selection";
-import { ActiveCompanyProvider } from "./ActiveCompanyContext";
-import { CompanySelector } from "./CompanySelector";
+import { getDashboardContext } from "./server-context";
 import { CompanyOnboardingForm } from "./onboarding/CompanyOnboardingForm";
 import styles from "../../app/session.module.scss";
-import companyStyles from "./companies.module.scss";
+import dashboardStyles from "../../components/layout/dashboard.module.scss";
 
 export async function CompanyWorkspace({ onboarding = false, selectionError = false }: { onboarding?: boolean; selectionError?: boolean }) {
-  const access = await requireDashboardAccess();
+  const access = await getDashboardContext();
   if (access.kind === "authenticated") {
     if (!access.companies.length && !onboarding) redirect("/dashboard/onboarding");
   }
-  const store = await cookies();
-  const activeCompany = access.kind === "authenticated"
-    ? resolveActiveCompany(access.companies, store.get(sessionCookieName())?.value ?? "", store.get(companyCookieName())?.value)
-    : null;
+  if (access.kind === "authenticated") {
+    if (onboarding) return <section className={`${dashboardStyles.card} ${dashboardStyles.onboarding}`}>
+      <h2>Cadastre sua empresa</h2><CompanyOnboardingForm /><a href="/dashboard">{access.companies.length ? "Voltar ao dashboard" : "Verificar empresas novamente"}</a>
+    </section>;
+    return <section className={dashboardStyles.card} aria-label="Visão geral do dashboard">
+      <h2>{access.user?.name ? `Olá, ${access.user.name}!` : "Boas-vindas ao Cartly!"}</h2>
+      <p>Organize a gestão do seu negócio por aqui.</p>
+      {selectionError && <p role="alert" className={dashboardStyles.error}>Não foi possível selecionar a empresa. Verifique as empresas disponíveis e tente novamente.</p>}
+      <div className={dashboardStyles.empty}>
+        <h3>{access.activeCompany ? access.activeCompany.name : "Escolha sua empresa para começar"}</h3>
+        <p>{access.activeCompany ? "Este é o espaço da sua empresa. Os módulos de gestão estarão disponíveis em breve." : "Selecione uma das empresas disponíveis no cabeçalho para definir seu contexto de trabalho."}</p>
+        <a href="/dashboard/onboarding">Criar nova empresa</a>
+      </div>
+    </section>;
+  }
   return (
     <main className={styles.page}>
       <section className={styles.card}>
-        {access.kind === "authenticated" ? onboarding ? (
-          <><h1>Cadastre sua empresa</h1><CompanyOnboardingForm /><Link href="/dashboard">{access.companies.length ? "Voltar ao dashboard" : "Verificar empresas novamente"}</Link></>
-        ) : (
-          <><h1>Área protegida</h1><p>Sua sessão está ativa.</p>
-            {selectionError && <p role="alert" className={companyStyles.error}>Não foi possível selecionar a empresa. Verifique as empresas disponíveis e tente novamente.</p>}
-            <ActiveCompanyProvider companies={access.companies} activeCompany={activeCompany}><CompanySelector /></ActiveCompanyProvider>
-            <Link href="/dashboard/onboarding">Criar nova empresa</Link>
-          </>
-        ) : access.kind === "denied" ? (
+        {access.kind === "denied" ? (
           <><h1>Acesso negado</h1><p role="alert">Você não tem permissão para acessar esta área.</p></>
         ) : (
-          <><h1>Acesso indisponível</h1><p role="alert">Não foi possível verificar seu acesso. Tente novamente.</p><Link href="/dashboard">Tentar novamente</Link></>
+          <><h1>Acesso indisponível</h1><p role="alert">Não foi possível verificar seu acesso. Tente novamente.</p><a href="/dashboard">Tentar novamente</a></>
         )}
         <form action="/api/auth/logout" method="post"><Button type="submit" variant="outline">Sair</Button></form>
       </section>

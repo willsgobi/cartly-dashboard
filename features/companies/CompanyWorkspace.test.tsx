@@ -24,7 +24,6 @@ describe("company workspace navigation boundary", () => {
     expect(screen.getByRole("heading", { name: "Cadastre sua empresa" })).toBeDefined();
     expect(screen.getByRole("link", { name: "Verificar empresas novamente" }).getAttribute("href")).toBe("/dashboard");
     expect(screen.getByRole("form", { name: "Cadastro de empresa" })).toBeDefined();
-    expect(screen.getByRole("button", { name: "Sair" }).closest("form")?.getAttribute("action")).toBe("/api/auth/logout");
   });
   it("reuses onboarding for an additional company and offers a return to the dashboard", async () => {
     render(await CompanyWorkspace({ onboarding: true }));
@@ -34,12 +33,12 @@ describe("company workspace navigation boundary", () => {
   it("automatically selects one company", async () => {
     vi.mocked(requireDashboardAccess).mockResolvedValue({ kind: "authenticated", companies: [companies[0]] });
     render(await CompanyWorkspace({}));
-    expect(screen.getByRole("status").textContent).toBe("Empresa a");
+    expect(screen.getByRole("heading", { name: "Empresa a" })).toBeDefined();
     expect(screen.getByRole("link", { name: "Criar nova empresa" }).getAttribute("href")).toBe("/dashboard/onboarding");
   });
   it("shows a selector when there are multiple companies and a safe selection error", async () => {
     render(await CompanyWorkspace({ selectionError: true }));
-    expect(screen.getByRole("combobox")).toBeDefined();
+    expect(screen.getByText("Escolha sua empresa para começar")).toBeDefined();
     expect(screen.getByRole("link", { name: "Criar nova empresa" }).getAttribute("href")).toBe("/dashboard/onboarding");
     expect(screen.getByRole("alert").textContent).toContain("Não foi possível selecionar");
   });

@@ -30,6 +30,8 @@ Route group names do not affect URL. Avoid creating folders/routes not requested
 - F05 LoginForm reuses the same components/schemas. Its small browser adapter calls only the existing same-origin /api/auth/login BFF with cookie credentials; it does not replace F02 or call NestJS directly. The Server Component sanitizes returnTo, the BFF validates it again, and a full document navigation starts protected rendering with the new cookie. Existing native POST logout remains unchanged.
 - Keep DTOs distinct from UI view models where shapes differ. No direct `fetch` sprinkled throughout components.
 
+F08 provides the authenticated route-group layout in app/(dashboard)/layout.tsx, composed from components/layout. Server-rendered pages and layout share features/companies/server-context.ts through React request-only memoization, so the authoritative guard/list check runs once per request. ActiveCompanyProvider wraps header and page content. Dynamic reads remain beneath Suspense and connection(); neither use cache nor persistent layout state is an authorization boundary. See [modules/dashboard.md](modules/dashboard.md) for mobile dialog, unavailable navigation and display-user behavior.
+
 ## Company context
 After successful login, call documented `GET /companies`. If empty, guide user to company onboarding; if one/many, choose/restore an authorized active company. Persist only non-sensitive company selection if needed. On switch: clear company-scoped caches/forms, cancel or ignore stale requests and revalidate access. Every documented company-scoped call must include companyId at its specified location, not invented URL prefixes. Never trust only client-side filtering.
 

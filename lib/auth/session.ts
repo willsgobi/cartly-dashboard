@@ -2,6 +2,7 @@ import "server-only";
 import type { NextResponse } from "next/server";
 import { ApiError } from "../api/errors";
 import { clearCompanySelection } from "../companies/selection";
+import { clearDisplayUser, setDisplayUser, type DisplayUser } from "./display-user";
 
 export class SessionError extends ApiError {
   constructor(readonly reason: "missing" | "expired" | "invalid") {
@@ -55,7 +56,7 @@ function cookieOptions() {
   } satisfies { httpOnly: boolean; secure: boolean; sameSite: "lax"; path: string };
 }
 
-export function setSessionCookie(response: NextResponse, token: string): void {
+export function setSessionCookie(response: NextResponse, token: string, user?: DisplayUser): void {
   const exp = getJwtExpiration(token);
   const now = Date.now();
   if (exp === undefined || Math.floor(exp - now / 1000) <= 0) throw new ApiError("invalid-response");
@@ -64,9 +65,12 @@ export function setSessionCookie(response: NextResponse, token: string): void {
     expires: new Date(exp * 1000),
     maxAge: Math.floor(exp - now / 1000),
   });
+  if (user) setDisplayUser(response, token, user, new Date(exp * 1000), Math.floor(exp - now / 1000));
+  else clearDisplayUser(response);
 }
 
 export function clearSessionCookie(response: NextResponse): void {
+  clearDisplayUser(response);
   clearCompanySelection(response);
   response.cookies.set(sessionCookieName(), "", {
     ...cookieOptions(), maxAge: 0, expires: new Date(0),

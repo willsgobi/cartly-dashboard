@@ -85,6 +85,7 @@ export async function checkAuthBrowser(origin, { setProtectedStatus, setCompanie
       await send("Input.insertText", { text });
     };
     const click = async (text) => {
+      if (text === "Sair") await evaluate("(()=>{if(![...document.querySelectorAll('button')].some(e=>e.getClientRects().length&&e.textContent.trim()==='Sair'))document.querySelector('[data-user-menu] summary')?.click()})()");
       await wait(`[...document.querySelectorAll('button,a')].some(e=>e.getClientRects().length&&!e.disabled&&e.textContent.trim()===${JSON.stringify(text)})`);
       await evaluate(`(()=>{const b=[...document.querySelectorAll('button,a')].find(e=>e.getClientRects().length&&e.textContent.trim()===${JSON.stringify(text)});if(!b)throw new Error('Missing control');b.click()})()`);
     };
@@ -103,7 +104,7 @@ export async function checkAuthBrowser(origin, { setProtectedStatus, setCompanie
       await fill("email", "test@example.com");
       await fill("password", "synthetic-password");
       await click("Entrar");
-      await wait("location.pathname==='/dashboard' && document.body.innerText.includes('Sua sessão está ativa.')");
+      await wait("location.pathname==='/dashboard' && document.body.innerText.includes('Organize a gestão do seu negócio por aqui.')");
     };
 
     await send("Page.enable");
@@ -125,9 +126,11 @@ export async function checkAuthBrowser(origin, { setProtectedStatus, setCompanie
     const [cookie] = await sessionCookies();
     assert(cookie?.httpOnly && cookie.secure && cookie.sameSite === "Lax");
     assert(!(await evaluate("document.cookie")).includes("cartly_session"), "JWT must be invisible to JavaScript");
+    assert(!(await evaluate("document.cookie")).includes("cartly_user"), "Display profile cookie must remain HttpOnly");
     assert.equal(await evaluate("fetch('/api/auth/session').then(r=>r.status)"), 200);
     await navigate("Page.reload");
-    await wait("document.readyState==='complete' && document.body.innerText.includes('Sua sessão está ativa.')");
+    await wait("document.readyState==='complete' && document.body.innerText.includes('Organize a gestão do seu negócio por aqui.')");
+    assert(await evaluate("document.body.innerText.includes('Olá, Pessoa de teste!')"), "Welcome must use the safe login profile after refresh");
     assert.equal((await sessionCookies())[0]?.value, cookie.value, "Refresh must retain the bounded session");
 
     setProtectedStatus(403);
@@ -137,15 +140,16 @@ export async function checkAuthBrowser(origin, { setProtectedStatus, setCompanie
     await wait("document.body.innerText.includes('Acesso negado')");
     setProtectedStatus(200);
     await navigate("Page.reload");
-    await wait("document.body.innerText.includes('Sua sessão está ativa.')");
+    await wait("document.body.innerText.includes('Organize a gestão do seu negócio por aqui.')");
     const history = await send("Page.getNavigationHistory");
     const protectedEntry = history.entries[history.currentIndex].id;
     await click("Sair");
     await wait("location.pathname==='/login' && !!document.querySelector('[name=password]')");
     assert.equal((await sessionCookies()).length, 0, "Logout must delete the session");
+    assert(!(await send("Storage.getCookies")).cookies.some((item) => item.name === "__Host-cartly_user"), "Logout must delete the display profile");
     await navigate("Page.navigateToHistoryEntry", { entryId: protectedEntry });
     await wait("location.pathname==='/login' && document.readyState==='complete'");
-    assert(!(await evaluate("document.body.innerText")).includes("Sua sessão está ativa."), "History must not expose protected content after logout");
+    assert(!(await evaluate("document.body.innerText")).includes("Organize a gestão do seu negócio por aqui."), "History must not expose protected content after logout");
     assert.equal(await evaluate("fetch('/api/auth/session').then(r=>r.status)"), 401);
 
     await signIn();
@@ -235,10 +239,47 @@ export async function checkAuthBrowser(origin, { setProtectedStatus, setCompanie
     setCompanies(companyFixtures);
     await signIn();
     assert.equal(await evaluate("document.querySelector('select').value"), "", "A new session must not inherit a company choice");
+    // F08: native modal focus, inert background, navigation and account disclosure.
+    await send("Emulation.setDeviceMetricsOverride", { width: 390, height: 1000, deviceScaleFactor: 1, mobile: true });
+    await wait("document.querySelector('[aria-label=\"Abrir menu de navegação\"]')?.getClientRects().length>0");
+    const openDrawer = async () => {
+      await evaluate("document.querySelector('[aria-label=\"Abrir menu de navegação\"]').click()");
+      await wait("document.querySelector('dialog')?.matches(':modal')");
+      assert(await evaluate("document.querySelector('dialog').contains(document.activeElement)"));
+    };
+    const closedDrawer = async () => {
+      await wait("!document.querySelector('dialog').open && document.activeElement.getAttribute('aria-label')==='Abrir menu de navegação'");
+      assert.equal(await evaluate("document.activeElement.getAttribute('aria-label')"), "Abrir menu de navegação");
+    };
+    await openDrawer();
+    await evaluate("document.querySelector('[data-user-menu] summary').focus()");
+    assert(await evaluate("document.querySelector('dialog').contains(document.activeElement)"), "Modal must keep background inert");
+    await send("Input.dispatchKeyEvent", { type: "keyDown", key: "Tab", code: "Tab", windowsVirtualKeyCode: 9 });
+    await send("Input.dispatchKeyEvent", { type: "keyUp", key: "Tab", code: "Tab", windowsVirtualKeyCode: 9 });
+    assert(await evaluate("document.querySelector('dialog').contains(document.activeElement)"));
+    const drawerShot = await send("Page.captureScreenshot", { format: "png" });
+    writeFileSync(join(profile, "dashboard-drawer.png"), Buffer.from(drawerShot.data, "base64"));
+    await send("Input.dispatchKeyEvent", { type: "keyDown", key: "Escape", code: "Escape", windowsVirtualKeyCode: 27 });
+    await send("Input.dispatchKeyEvent", { type: "keyUp", key: "Escape", code: "Escape", windowsVirtualKeyCode: 27 });
+    await closedDrawer();
+    await openDrawer();
+    await click("Dashboard");
+    await closedDrawer();
+    await openDrawer();
+    await send("Input.dispatchMouseEvent", { type: "mousePressed", x: 380, y: 300, button: "left", clickCount: 1 });
+    await send("Input.dispatchMouseEvent", { type: "mouseReleased", x: 380, y: 300, button: "left", clickCount: 1 });
+    await closedDrawer();
     for (const width of [320, 390, 768, 1280]) {
       await send("Emulation.setDeviceMetricsOverride", { width, height: 1000, deviceScaleFactor: 1, mobile: width < 640 });
       assert(await evaluate("document.documentElement.scrollWidth<=innerWidth"), `Overflow at ${width}px`);
+      if (width === 390 || width === 1280) {
+        const shot = await send("Page.captureScreenshot", { format: "png", captureBeyondViewport: true });
+        writeFileSync(join(profile, `dashboard-${width}.png`), Buffer.from(shot.data, "base64"));
+      }
     }
+    assert(await evaluate("!!document.querySelector('aside nav a[aria-current=page]')"), "Desktop navigation must highlight the dashboard");
+    assert.equal(await evaluate("document.querySelectorAll('aside nav a').length"), 1, "Unimplemented modules must not be links");
+    console.log("PASS dashboard shell: safe welcome/user menu, active company header, responsive sidebar/drawer, Escape, focus restoration, inert background, overlay and navigation close; screenshots " + profile);
     assert(urls.every((url) => !url.includes("synthetic-password") && !url.includes("synthetic-wrong")), "Passwords must not enter URLs");
     assert.deepEqual(errors, [], "No browser JavaScript exceptions");
     console.log("PASS browser companies: zero/one/multiple companies, native selection/switch, refresh restoration, removal, document cache reset, onboarding boundary, logout/new-session isolation");
