@@ -20,6 +20,7 @@ const companyFixtures = ["a", "b"].map((id) => ({
 }));
 let accessibleCompanies = [companyFixtures[0]];
 const upstreamPaths = [];
+const createdCompanies = [];
 const backend = createServer(async (request, response) => {
   upstreamPaths.push(request.url);
   response.setHeader("Content-Type", "application/json");
@@ -32,6 +33,19 @@ const backend = createServer(async (request, response) => {
     } else {
       response.writeHead(401).end(JSON.stringify({ message: "private diagnostic" }));
     }
+  } else if (request.url === "/companies" && request.method === "POST") {
+    assert.equal(request.headers.authorization, `Bearer ${token}`);
+    let body = "";
+    for await (const chunk of request) body += chunk;
+    const input = JSON.parse(body);
+    assert.deepEqual(Object.keys(input).sort(), ["address", "document", "name"]);
+    assert.deepEqual(Object.keys(input.address).sort(), ["city", "country", "number", "state", "street", "zipCode"]);
+    assert.equal(input.document, "11222333000181");
+    assert.equal(input.address.zipCode, "01001000");
+    createdCompanies.push(input);
+    const company = { ...input, id: "created-company", createdAt: "2026-10-17T12:00:00Z", address: { ...input.address, id: "new-address" } };
+    accessibleCompanies = [...accessibleCompanies, { id: company.id, name: company.name, document: company.document, createdAt: company.createdAt, updatedAt: company.createdAt }];
+    response.writeHead(201).end(JSON.stringify(company));
   } else if (request.url === "/companies" && request.method === "GET") {
     const status = request.headers.authorization === `Bearer ${token}` ? protectedStatus : 401;
     response.writeHead(status).end(JSON.stringify(status === 200 ? accessibleCompanies : { message: "private diagnostic" }));
@@ -114,7 +128,7 @@ try {
   response = await request("/dashboard", { headers: { Cookie: cookieHeader } });
   assert((await response.text()).includes("/dashboard/onboarding"), "No companies must lead to onboarding boundary");
   response = await request("/dashboard/onboarding", { headers: { Cookie: cookieHeader } });
-  assert((await response.text()).includes("Nenhuma empresa disponível"));
+  assert((await response.text()).includes("Cadastre sua empresa"));
   assert.equal((await request("/dashboard/onboarding")).status, 303);
   accessibleCompanies = [companyFixtures[0]];
 
@@ -157,6 +171,7 @@ try {
       setProtectedStatus: (status) => { protectedStatus = status; },
       setCompanies: (companies) => { accessibleCompanies = companies; },
       companyFixtures,
+      createdCompanies,
     });
   }
   assert(upstreamPaths.every((path) => path === "/auth/login" || path === "/companies"));

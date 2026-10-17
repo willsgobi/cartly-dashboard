@@ -9,7 +9,7 @@ F03's existing checkSessionAccess now retains the decoded companies on its serve
 ## Navigation and UI
 
 - /dashboard shows company selection and the existing logout action, within the existing Cartly authentication/scaffold layout. The accessible native select lists company names/documents; it uses React Hook Form/Zod, field errors and pending/disabled states.
-- Zero companies redirect to /dashboard/onboarding. This protected, empty-state navigation boundary offers retry and logout only. It deliberately has no creation form, company mutation or F07 integration. A nonempty list on that route redirects back to /dashboard, avoiding a loop.
+- Zero companies redirect to /dashboard/onboarding. F07 renders the protected creation form there, retaining retry/logout. Dashboard users with existing companies can also open that form through Criar nova empresa and return without changing selection. Successful creation verifies and activates the new company. See [onboarding.md](onboarding.md).
 - One company is automatically active on every verified render. Multiple companies require a valid stored preference or an explicit choice. An invalid, malformed, removed or foreign-session preference is ignored; no arbitrary first company is chosen.
 - Denied/unavailable list access withholds company data and shows a safe error (with retry for unavailable). Existing 401 handling redirects to login and clears invalid cookies. 403 preserves the session. Suspense supplies a non-sensitive loading state.
 
@@ -31,4 +31,4 @@ Future company data consumers must include company context at the contract-defin
 
 Unit/component tests cover zero/one/multiple lists, restoration, malformed/removed preferences, distinct session bindings, membership revalidation, selection/switching/loading, scope unmount cleanup, local logout/login cleanup, CSRF, 401/403, malformed responses and network failures. The existing production/Chrome suite also verifies real form POSTs, refresh restoration, full document cache reset, onboarding navigation, removed-company handling and a fresh selection after logout/login, using an isolated mock API.
 
-No activated real-backend test account is available. Positive real-NestJS company listing and switching remain a manual integration check; mock-backed results do not claim live authenticated validation. No company onboarding form, company creation, role inference, sidebar or dashboard metrics are part of F06.
+No activated real-backend test account is available. Positive real-NestJS company listing and switching remain a manual integration check; mock-backed results do not claim live authenticated validation. F07 supplies creation/onboarding using this same preference boundary; role inference, sidebar and dashboard metrics remain outside these tasks.

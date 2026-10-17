@@ -1,0 +1,10 @@
+.container,
+.form,
+.fields { display: grid; min-width: 0; gap: var(--space-4); overflow-wrap: anywhere; }
+.fields { margin: 0; padding: 0; border: 0; }
+.fields[hidden] { display: none; }
+.fields legend { margin-bottom: var(--space-4); font-weight: var(--font-weight-semibold); }
+.hint { color: var(--color-text-secondary); font-size: var(--font-size-sm); }
+.error { color: var(--color-danger-text); }
+.actions { display: flex; flex-wrap: wrap; gap: var(--space-3); }
+.actions > * { flex: 1 1 120px; }

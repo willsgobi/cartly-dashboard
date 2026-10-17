@@ -8,6 +8,7 @@ import { loginInputSchema, decodeLoginResponse } from "./schemas";
 import { clearSessionCookie, SessionError, sessionCookieName, setSessionCookie } from "./session";
 import { assertSameOrigin, loginLocation, loginRedirect, noStore, safeReturnTo } from "./security";
 import { clearCompanySelection } from "../companies/selection";
+import { readJsonInput } from "../api/read-json";
 
 function errorResponse(error: unknown, login = false, redirectTo?: string): NextResponse {
   const failure = error instanceof ApiError ? error : new ApiError("invalid-response");
@@ -29,41 +30,13 @@ export function authenticatedErrorResponse(error: unknown, returnTo: unknown = "
   return errorResponse(error);
 }
 
-/** Bound memory use even when Content-Length is missing or incorrect. */
-async function readLoginInput(request: NextRequest): Promise<unknown> {
-  const reader = request.body?.getReader();
-  if (!reader) throw new ApiError("request");
-  const decoder = new TextDecoder("utf-8", { fatal: true });
-  let text = "";
-  let bytes = 0;
-  try {
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      bytes += value.byteLength;
-      if (bytes > 16_384) {
-        await reader.cancel();
-        throw new ApiError("request");
-      }
-      text += decoder.decode(value, { stream: true });
-    }
-    text += decoder.decode();
-    const data: unknown = JSON.parse(text);
-    return data;
-  } catch {
-    throw new ApiError("request");
-  } finally {
-    reader.releaseLock();
-  }
-}
-
 export async function handleLogin(request: NextRequest): Promise<NextResponse> {
   try {
     assertSameOrigin(request);
     if (request.headers.get("content-type")?.split(";")[0].trim() !== "application/json") {
       throw new ApiError("http", { status: 415 });
     }
-    const parsed = loginInputSchema.safeParse(await readLoginInput(request));
+    const parsed = loginInputSchema.safeParse(await readJsonInput(request));
     if (!parsed.success) {
       return noStore(NextResponse.json({
         error: { kind: "request", message: "Informe um e-mail válido e sua senha.", status: 400 },

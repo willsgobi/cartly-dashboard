@@ -2,12 +2,12 @@ import assert from "node:assert/strict";
 import { createServer } from "node:http";
 import { once } from "node:events";
 import { spawn } from "node:child_process";
-import { existsSync, mkdtempSync } from "node:fs";
+import { existsSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 /** Actual browser cookie/history checks complement the production HTTP assertions. */
-export async function checkAuthBrowser(origin, { setProtectedStatus, setCompanies, companyFixtures }) {
+export async function checkAuthBrowser(origin, { setProtectedStatus, setCompanies, companyFixtures, createdCompanies }) {
   const chrome = process.env.CHROME_PATH ?? "C:/Program Files/Google/Chrome/Application/chrome.exe";
   assert(existsSync(chrome), "Set CHROME_PATH to a local Chrome/Chromium executable");
   const reservation = createServer();
@@ -37,8 +37,19 @@ export async function checkAuthBrowser(origin, { setProtectedStatus, setCompanie
     const pending = new Map();
     const errors = [];
     const urls = [];
+    let lookupCalls = 0;
     ws.onmessage = (event) => {
       const message = JSON.parse(event.data);
+      if (message.method === "Fetch.requestPaused") {
+        // Mock the BFF lookup boundary only: provider Route Handlers are covered by unit tests.
+        // No automated browser test contacts public ReceitaWS/ViaCEP services.
+        lookupCalls++;
+        void send("Fetch.fulfillRequest", {
+          requestId: message.params.requestId, responseCode: 502,
+          responseHeaders: [{ name: "Content-Type", value: "application/json" }],
+          body: Buffer.from(JSON.stringify({ error: { message: "Lookup unavailable in isolated browser check" } })).toString("base64"),
+        });
+      }
       if (message.method === "Page.frameNavigated" && !message.params.frame.parentId) navigations++;
       if (message.id) {
         const handler = pending.get(message.id);
@@ -55,7 +66,7 @@ export async function checkAuthBrowser(origin, { setProtectedStatus, setCompanie
     });
     const evaluate = async (expression) => {
       const result = await send("Runtime.evaluate", { expression, returnByValue: true, awaitPromise: true });
-      assert(!result.exceptionDetails, "Browser evaluation failed");
+      assert(!result.exceptionDetails, JSON.stringify(result.exceptionDetails));
       return result.result.value;
     };
     const wait = async (expression) => {
@@ -63,14 +74,20 @@ export async function checkAuthBrowser(origin, { setProtectedStatus, setCompanie
         if (await evaluate(expression)) return;
         await new Promise((resolve) => setTimeout(resolve, 100));
       }
-      throw new Error(`Browser condition failed: ${expression}`);
+      throw new Error(`Browser condition failed: ${expression}; visible text: ${await evaluate("document.body.innerText")}`);
     };
     const fill = async (name, text) => {
-      await wait(`[...document.querySelectorAll('[name=${name}]')].some(e=>e.getClientRects().length)`);
-      await evaluate(`(()=>{const e=[...document.querySelectorAll('[name=${name}]')].find(e=>e.getClientRects().length);e.focus();e.select()})()`);
+      const selector = JSON.stringify(`[name="${name}"]`);
+      await wait(`[...document.querySelectorAll(${selector})].some(e=>e.getClientRects().length)`);
+      await wait(`[...document.querySelectorAll(${selector})].some(e=>e.getClientRects().length&&Object.keys(e).some(k=>k.startsWith('__reactProps$')))`);
+      await evaluate("new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))");
+      await evaluate(`(()=>{const e=[...document.querySelectorAll(${selector})].find(e=>e.getClientRects().length);e.focus();e.select()})()`);
       await send("Input.insertText", { text });
     };
-    const click = (text) => evaluate(`(()=>{const b=[...document.querySelectorAll('button,a')].find(e=>e.getClientRects().length&&e.textContent.trim()===${JSON.stringify(text)});if(!b)throw new Error('Missing control');b.click()})()`);
+    const click = async (text) => {
+      await wait(`[...document.querySelectorAll('button,a')].some(e=>e.getClientRects().length&&!e.disabled&&e.textContent.trim()===${JSON.stringify(text)})`);
+      await evaluate(`(()=>{const b=[...document.querySelectorAll('button,a')].find(e=>e.getClientRects().length&&e.textContent.trim()===${JSON.stringify(text)});if(!b)throw new Error('Missing control');b.click()})()`);
+    };
     const navigate = async (method, params = {}) => {
       const previous = navigations;
       await send(method, params);
@@ -92,6 +109,7 @@ export async function checkAuthBrowser(origin, { setProtectedStatus, setCompanie
     await send("Page.enable");
     await send("Runtime.enable");
     await send("Network.enable");
+    await send("Fetch.enable", { patterns: [{ urlPattern: origin + "/api/lookups/*" }] });
     await go("/dashboard?tab=summary");
     await wait("location.pathname==='/login' && !!document.querySelector('[name=password]')");
     assert.equal(await evaluate("new URLSearchParams(location.search).get('returnTo')"), "/dashboard?tab=summary");
@@ -147,6 +165,8 @@ export async function checkAuthBrowser(origin, { setProtectedStatus, setCompanie
     await wait("!!document.querySelector('select[name=companyId]')");
     assert.equal(await evaluate("document.querySelector('select').value"), "");
     const select = async (id) => {
+      await wait("!!document.querySelector('select[name=companyId]') && Object.keys(document.querySelector('select[name=companyId]')).some(k=>k.startsWith('__reactProps$'))");
+      await evaluate("new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))");
       await evaluate(`(()=>{const e=document.querySelector('select[name=companyId]');e.value=${JSON.stringify(id)};e.dispatchEvent(new Event('change',{bubbles:true}))})()`);
     };
     await select("b");
@@ -166,8 +186,49 @@ export async function checkAuthBrowser(origin, { setProtectedStatus, setCompanie
     assert.equal(await evaluate("!!document.querySelector('select')"), false, "Single accessible company is automatic");
     setCompanies([]);
     await navigate("Page.reload");
-    await wait("location.pathname==='/dashboard/onboarding' && document.body.innerText.includes('Nenhuma empresa disponível')");
-    assert.equal(await evaluate("!!document.querySelector('input')"), false, "F07 creation form must not be implemented");
+    await wait("location.pathname==='/dashboard/onboarding' && document.body.innerText.includes('Cadastre sua empresa')");
+    // Existing-company users can open the same form and cancel without changing selection.
+    setCompanies([companyFixtures[1]]);
+    await click("Verificar empresas novamente");
+    await wait("location.pathname==='/dashboard' && document.querySelector('[role=status]')?.textContent==='Empresa b'");
+    await click("Criar nova empresa");
+    await wait("location.pathname==='/dashboard/onboarding' && document.body.innerText.includes('Cadastre sua empresa')");
+    await click("Voltar ao dashboard");
+    await wait("location.pathname==='/dashboard' && document.querySelector('[role=status]')?.textContent==='Empresa b'");
+    await click("Criar nova empresa");
+    await wait("location.pathname==='/dashboard/onboarding' && document.body.innerText.includes('Cadastre sua empresa')");
+    await fill("document", "11.222.333/0001-81");
+    await fill("name", "Empresa de teste");
+    await click("Consultar CNPJ");
+    await wait("document.body.innerText.includes('Não foi possível consultar o CNPJ')");
+    await click("Continuar");
+    await fill("address.zipCode", "01001-000");
+    await fill("address.street", "Rua manual");
+    await wait("document.body.innerText.includes('CEP não encontrado ou indisponível')");
+    await fill("address.number", "12");
+    await fill("address.city", "São Paulo");
+    await fill("address.state", "SP");
+    await click("Voltar");
+    assert.equal(await evaluate("document.querySelector('[name=name]').value"), "Empresa de teste");
+    await click("Continuar");
+    assert.equal(await evaluate("document.querySelector('[name=\"address.number\"]').value"), "12");
+    for (const width of [320, 390, 768, 1280]) {
+      await send("Emulation.setDeviceMetricsOverride", { width, height: 1100, deviceScaleFactor: 1, mobile: width < 640 });
+      assert(await evaluate("document.documentElement.scrollWidth<=innerWidth"), `Onboarding overflow at ${width}px`);
+      if (width === 390) {
+        const screenshot = await send("Page.captureScreenshot", { format: "png", captureBeyondViewport: true });
+        writeFileSync(join(profile, "onboarding-mobile.png"), Buffer.from(screenshot.data, "base64"));
+        console.log("Onboarding screenshot: " + join(profile, "onboarding-mobile.png"));
+      }
+    }
+    await click("Criar empresa");
+    await wait("location.pathname==='/dashboard' && document.querySelector('[role=status]')?.textContent==='Empresa de teste'");
+    assert.equal(createdCompanies.length, 1, "Company must be created only once");
+    assert.equal(lookupCalls, 2, "No redundant lookup requests");
+    await navigate("Page.reload");
+    await wait("document.querySelector('[role=status]')?.textContent==='Empresa de teste'");
+    assert.equal(await evaluate("document.querySelector('[role=status]').textContent"), "Empresa de teste");
+    console.log("PASS browser onboarding: two steps, manual fallback, preserved values, exact normalized POST, active company synchronization, dashboard redirect, responsive layout");
     await click("Sair");
     await wait("location.pathname==='/login' && !!document.querySelector('[name=password]')");
     assert(!(await send("Storage.getCookies")).cookies.some((cookie) => cookie.name === "__Host-cartly_company"), "Logout clears the company preference");
