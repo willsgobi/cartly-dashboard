@@ -14,6 +14,8 @@
 - F08 adds layout/navigation/mobile-drawer/account-disclosure tests and display-profile integrity/isolation/cleanup tests. jsdom stubs native dialog methods only for component tests; the existing production Chrome suite verifies real modal focus/inert background, Escape/overlay/navigation close, trigger focus restoration, profile/JWT HttpOnly behavior, welcome after refresh and responsive screenshots. The production HTTP suite checks one authoritative company read per layout/page request; no live API or new browser dependency is needed.
 
 ## Test pyramid
+
+F09 adds category service/BFF, browser adapter, protected workspace and CRUD component tests. Fetch/adapter boundaries are mocked; no live mutation is used. The production Chrome suite exercises the actual category BFF with mock NestJS, including 204, duplicate/linked-product 409, 403 preservation, 401 cleanup, company switching, modal focus/Escape and responsive screenshots. Product/permission APIs remain outside the test fixture inventory.
 - Unit: formatters, schema refinements (NORMAL/VARIANT/VARIANT_WITH_PRICE), company-scoped query builders, error mapping.
 - Components: inputs and validation, disabled/loading/error states, keyboard interactions.
 - Integration: login/onboarding, company switch cache invalidation, list/create/edit/delete products and category restrictions with realistic mocked responses.

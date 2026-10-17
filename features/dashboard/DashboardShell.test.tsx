@@ -1,6 +1,8 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { renderToString } from "react-dom/server";
+import { hydrateRoot } from "react-dom/client";
 import userEvent from "@testing-library/user-event";
 import { ActiveCompanyProvider } from "../companies/ActiveCompanyContext";
 import { DashboardHeader } from "../../components/layout/DashboardHeader";
@@ -25,19 +27,63 @@ function header(single = false) {
 }
 
 describe("dashboard shell", () => {
+  it.each([
+    ["/dashboard/categories", "Categorias"],
+    ["/dashboard/onboarding", "Nova empresa"],
+    ["/dashboard", "Dashboard"],
+  ])("hydrates the shared layout at %s without mismatched route text or attributes", async (pathname, title) => {
+    const container = document.createElement("div");
+    document.body.append(container);
+    location.pathname = "/dashboard/onboarding";
+    container.innerHTML = renderToString(header());
+    expect(container.querySelector("h1")?.textContent).toBe("Painel administrativo");
+    expect(container.querySelector('[aria-current="page"]')).toBeNull();
+    location.pathname = pathname;
+    const recoverableErrors: unknown[] = [];
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+    let root: ReturnType<typeof hydrateRoot> | undefined;
+    try {
+      await act(async () => { root = hydrateRoot(container, header(), { onRecoverableError: (error) => { recoverableErrors.push(error); } }); });
+      expect(recoverableErrors).toEqual([]);
+      expect(consoleError).not.toHaveBeenCalled();
+      expect(container.querySelector("h1")?.textContent).toBe(title);
+      expect(container.querySelector('nav a[href="/dashboard/categories"]')?.hasAttribute("aria-current")).toBe(pathname === "/dashboard/categories");
+      expect(container.querySelector('nav a[href="/dashboard"]')?.hasAttribute("aria-current")).toBe(pathname === "/dashboard");
+    } finally {
+      await act(async () => { root?.unmount(); });
+      container.remove();
+    }
+  });
+  it("updates the hydrated title and sidebar when the shared layout is reused", () => {
+    const view = render(header());
+    location.pathname = "/dashboard/categories"; view.rerender(header());
+    expect(screen.getByRole("heading", { name: "Categorias" })).toBeDefined();
+    expect(screen.getByRole("link", { name: "Categorias", hidden: true }).getAttribute("aria-current")).toBe("page");
+    location.pathname = "/dashboard/onboarding"; view.rerender(header());
+    expect(screen.getByRole("heading", { name: "Nova empresa" })).toBeDefined();
+    expect(screen.getByRole("link", { name: "Categorias", hidden: true }).hasAttribute("aria-current")).toBe(false);
+  });
   it("provides only real navigation and labels every unavailable module", () => {
     render(<SidebarNavigation />);
     expect(screen.getByRole("link", { name: "Dashboard" }).getAttribute("aria-current")).toBe("page");
-    for (const label of ["Pedidos", "Produtos", "Categorias", "Clientes", "Usuários", "Relatórios", "Configurações"]) {
+    expect(screen.getByRole("link", { name: "Categorias" }).getAttribute("href")).toBe("/dashboard/categories");
+    for (const label of ["Pedidos", "Produtos", "Clientes", "Usuários", "Relatórios", "Configurações"]) {
       expect(screen.getByText(label).closest("[aria-disabled]")).not.toBeNull();
       expect(screen.queryByRole("link", { name: label })).toBeNull();
     }
-    expect(screen.getAllByText("Em breve")).toHaveLength(7);
+    expect(screen.getAllByText("Em breve")).toHaveLength(6);
   });
   it("does not mark Dashboard active on the company creation route", () => {
     location.pathname = "/dashboard/onboarding";
     render(<SidebarNavigation />);
     expect(screen.getByRole("link", { name: "Dashboard" }).hasAttribute("aria-current")).toBe(false);
+  });
+  it("highlights Categories and uses the matching header on its route", () => {
+    location.pathname = "/dashboard/categories";
+    render(header());
+    expect(screen.getByRole("heading", { name: "Categorias" })).toBeDefined();
+    expect(screen.getByRole("link", { name: "Categorias", hidden: true }).getAttribute("aria-current")).toBe("page");
+    expect(screen.getByRole("link", { name: "Dashboard", hidden: true }).hasAttribute("aria-current")).toBe(false);
   });
   it("shows the selected company and reuses the authorized F06 switch form", () => {
     render(header());

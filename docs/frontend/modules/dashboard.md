@@ -16,11 +16,13 @@ features/companies/server-context.ts memoizes one authoritative guard/list resul
 
 Desktop uses a 224px sidebar and a flexible content column. Below 64rem the sidebar is hidden and the header exposes a modal navigation drawer with the same Sidebar component. Header actions wrap/adapt for tablet/mobile widths; content and long names use constrained flexible columns and wrapping, without horizontal scrolling at 320/390/768/1280px.
 
-The navigation lists Dashboard, Pedidos, Produtos, Categorias, Clientes, Usuários, Relatórios and Configurações. Only Dashboard has a real link; its exact route receives aria-current=page. All unavailable modules are noninteractive aria-disabled text with Em breve, not links to nonexistent pages. No role/permission rule, business page, analytics data or backend operation is invented.
+The navigation lists Dashboard, Pedidos, Produtos, Categorias, Clientes, Usuários, Relatórios and Configurações. Dashboard and the F09 Categories module have real links; each exact route receives aria-current=page. All unavailable modules are noninteractive aria-disabled text with Em breve, not links to nonexistent pages. No role/permission rule, analytics data or backend operation is invented.
 
 The protected landing page greets the user using the available login display snapshot and shows the verified active company or a prompt to select one. A clearly worded empty workspace replaces metrics. Criar nova empresa continues to reuse F07. These company creation/back/retry entry points use document navigation so both page and App Router layout refresh their verified company context; layout reuse alone must not leave an old header after list changes.
 
 ## Company and account integration
+
+The shared header title and active navigation use useHydratedPathname. Its useSyncExternalStore server snapshot renders the same neutral title (Painel administrativo) and no active link during SSR and initial hydration, even when Next's server pathname differs from the browser route. After hydration, usePathname supplies the current title/aria-current and continues updating during client navigation. This avoids text/attribute mismatches without suppressHydrationWarning or changing authorization/cache boundaries. The mobile drawer still observes pathname only in an effect for closing on navigation.
 
 DashboardHeader reuses F06 CompanySelector in a compact presentation; no selection or persistence logic is duplicated. A single company is automatic, multiple companies use the existing native POST /api/companies/active, and zero companies show a neutral header while the page redirects to onboarding. That POST still revalidates membership, sets the existing session-bound preference and reloads the document, discarding prior company state. ActiveCompanyProvider wraps the shell/page slot and keys its subtree by selected company ID.
 
@@ -43,4 +45,4 @@ The native dialog behavior follows [MDN showModal](https://developer.mozilla.org
 
 Unit/component tests cover shell composition, current/unavailable navigation, single/multiple company header presentation, drawer controls/cancel/focus restoration, account disclosure/logout and display snapshot integrity/isolation/cleanup. Existing F03/F06/F07 tests retain their own auth/selection/onboarding coverage. The production Chrome suite checks safe welcome after refresh, JWT/profile HttpOnly behavior, switching, native drawer inert background and keyboard operation, close/focus restore, overlay/navigation closure, logout, all responsive widths and screenshots. Desktop/mobile/drawer screenshots are visually inspected.
 
-No activated real NestJS account was supplied; positive backend integration remains a manual check. The mock-backed tests do not claim live deployment validation. No F09 categories, products, metrics, new dependency or backend/OpenAPI change is included.
+No activated real NestJS account was supplied; positive backend integration remains a manual check. The mock-backed tests do not claim live deployment validation. F09 adds the Categories route using this shell; products, metrics, new dependencies and backend/OpenAPI changes remain outside this implementation.

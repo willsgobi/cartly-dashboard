@@ -7,7 +7,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 /** Actual browser cookie/history checks complement the production HTTP assertions. */
-export async function checkAuthBrowser(origin, { setProtectedStatus, setCompanies, companyFixtures, createdCompanies }) {
+export async function checkAuthBrowser(origin, { setProtectedStatus, setCompanies, companyFixtures, createdCompanies, setCategoryStatus }) {
   const chrome = process.env.CHROME_PATH ?? "C:/Program Files/Google/Chrome/Application/chrome.exe";
   assert(existsSync(chrome), "Set CHROME_PATH to a local Chrome/Chromium executable");
   const reservation = createServer();
@@ -57,6 +57,10 @@ export async function checkAuthBrowser(origin, { setProtectedStatus, setCompanie
         if (message.error) handler.reject(message.error); else handler.resolve(message.result);
       }
       if (message.method === "Runtime.exceptionThrown") errors.push(message.params.exceptionDetails.text);
+      if (message.method === "Runtime.consoleAPICalled" && message.params.type === "error") {
+        const text = message.params.args.map((argument) => argument.value ?? argument.description ?? "").join(" ");
+        if (/hydration|hydrating|server rendered|Minified React error #(418|425)/i.test(text)) errors.push(text);
+      }
       if (message.method === "Network.requestWillBeSent") urls.push(message.params.request.url);
     };
     const send = (method, params = {}) => new Promise((resolve, reject) => {
@@ -91,7 +95,7 @@ export async function checkAuthBrowser(origin, { setProtectedStatus, setCompanie
         await evaluate("(()=>{if(![...document.querySelectorAll('button')].some(e=>e.getClientRects().length&&e.textContent.trim()==='Sair'))[...document.querySelectorAll('[data-user-menu] summary')].find(e=>e.getClientRects().length)?.click()})()");
       }
       await wait(`[...document.querySelectorAll('button,a')].some(e=>e.getClientRects().length&&!e.disabled&&e.textContent.trim()===${JSON.stringify(text)})`);
-      await evaluate(`(()=>{const b=[...document.querySelectorAll('button,a')].find(e=>e.getClientRects().length&&e.textContent.trim()===${JSON.stringify(text)});if(!b)throw new Error('Missing control');b.click()})()`);
+      await evaluate(`(()=>{const b=[...document.querySelectorAll('button,a')].find(e=>e.getClientRects().length&&e.textContent.trim()===${JSON.stringify(text)});if(!b)throw new Error('Missing control');b.focus();b.click()})()`);
     };
     const navigate = async (method, params = {}) => {
       const previous = navigations;
@@ -282,12 +286,77 @@ export async function checkAuthBrowser(origin, { setProtectedStatus, setCompanie
       }
     }
     assert(await evaluate("!!document.querySelector('aside nav a[aria-current=page]')"), "Desktop navigation must highlight the dashboard");
-    assert.equal(await evaluate("document.querySelectorAll('aside nav a').length"), 1, "Unimplemented modules must not be links");
+    assert.equal(await evaluate("document.querySelectorAll('aside nav a').length"), 2, "Only implemented modules must be links");
     assert.equal(await evaluate("document.querySelector('aside').getBoundingClientRect().width"), 224, "Desktop sidebar must use the reduced width");
     assert(await evaluate("!!document.querySelector('aside [aria-label=\"Minha conta\"]')"));
     assert(await evaluate("![...document.querySelectorAll('header [data-user-menu]')].some(element => !element.closest('dialog'))"), "Account controls must appear only in the sidebar");
     assert(await evaluate("(()=>{const summary=document.querySelector('aside summary');const arrow=summary.lastElementChild.getBoundingClientRect();const row=summary.getBoundingClientRect();return Math.abs(arrow.top+arrow.height/2-row.top-row.height/2)<1})()"), "Account chevron must be vertically centered");
     console.log("PASS dashboard shell: safe welcome/user menu, active company header, responsive sidebar/drawer, Escape, focus restoration, inert background, overlay and navigation close; screenshots " + profile);
+    // F09: actual dialogs and same-origin CRUD through the production BFF.
+    await click("Categorias");
+    await wait("location.pathname==='/dashboard/categories' && document.querySelector('h1')?.textContent==='Categorias'");
+    await navigate("Page.reload");
+    await wait("document.querySelector('h1')?.textContent==='Categorias'");
+    await click("Dashboard");
+    await wait("location.pathname==='/dashboard' && document.querySelector('h1')?.textContent==='Dashboard'");
+    await click("Categorias");
+    await wait("location.pathname==='/dashboard/categories' && document.querySelector('h1')?.textContent==='Categorias'");
+    await wait("document.body.innerText.includes('Selecione uma empresa no cabeçalho')");
+    const chooseCompany = async (id) => {
+      await wait("!!document.querySelector('select') && Object.keys(document.querySelector('select')).some(k=>k.startsWith('__reactProps$'))");
+      await evaluate(`(()=>{const select=document.querySelector('select');select.value=${JSON.stringify(id)};select.dispatchEvent(new Event('change',{bubbles:true}))})()`);
+      await wait(`location.pathname==='/dashboard' && document.querySelector('select')?.value===${JSON.stringify(id)}`);
+    };
+    await chooseCompany("a"); await go("/dashboard/categories");
+    await wait("document.body.innerText.includes('Nenhuma categoria cadastrada')");
+    assert(await evaluate("!!document.querySelector('aside a[href=\"/dashboard/categories\"][aria-current=page]')"));
+    await click("Nova categoria");
+    await wait("document.querySelector('dialog[open] input')===document.activeElement");
+    await evaluate("document.querySelector('header select').focus()");
+    assert(await evaluate("document.querySelector('dialog[open]').contains(document.activeElement)"), "Category modal makes the company switcher inert");
+    await click("Criar categoria"); await wait("document.body.innerText.includes('Informe o nome da categoria.')");
+    await fill("name", "  Bebidas  "); await click("Criar categoria");
+    await wait("!document.querySelector('dialog[open]') && !!document.querySelector('[aria-label=\"Editar Bebidas\"]:not(:disabled)')");
+    assert(await evaluate("document.body.innerText.includes('Categoria criada com sucesso.')"));
+    await click("Nova categoria"); await fill("name", "Bebidas"); await click("Criar categoria");
+    await wait("document.body.innerText.includes('Já existe uma categoria com este nome')");
+    assert.equal(await evaluate("document.querySelector('[name=name]').value"), "Bebidas");
+    await click("Cancelar");
+    await evaluate("document.querySelector('[aria-label=\"Editar Bebidas\"]').click()");
+    await fill("name", "Sucos"); await click("Salvar alterações");
+    await wait("!document.querySelector('dialog[open]') && !!document.querySelector('[aria-label=\"Editar Sucos\"]:not(:disabled)')");
+    // One category name activates a deterministic linked-product 409 in the mock only.
+    await click("Nova categoria"); await fill("name", "Vinculada"); await click("Criar categoria");
+    await wait("!document.querySelector('dialog[open]') && !!document.querySelector('[aria-label=\"Excluir Vinculada\"]:not(:disabled)')");
+    await evaluate("document.querySelector('[aria-label=\"Excluir Vinculada\"]').click()"); await click("Excluir categoria");
+    await wait("document.body.innerText.includes('existem produtos vinculados')"); await click("Cancelar");
+    setCategoryStatus(403);
+    await evaluate("document.querySelector('[aria-label=\"Excluir Sucos\"]').click()"); await click("Excluir categoria");
+    await wait("document.body.innerText.includes('Você não tem permissão para realizar esta ação.')");
+    assert.equal((await sessionCookies()).length, 1, "Category 403 must preserve the session");
+    setCategoryStatus(200); await click("Excluir categoria");
+    await wait("!document.querySelector('dialog[open]') && !document.querySelector('[aria-label=\"Editar Sucos\"]')");
+    assert(await evaluate("document.body.innerText.includes('Categoria excluída com sucesso.')"));
+    for (const width of [320, 390, 768, 1280]) {
+      await send("Emulation.setDeviceMetricsOverride", { width, height: 1000, deviceScaleFactor: 1, mobile: width < 640 });
+      assert(await evaluate("document.documentElement.scrollWidth<=innerWidth"), `Category overflow at ${width}px`);
+      if (width === 390 || width === 1280) {
+        const shot = await send("Page.captureScreenshot", { format: "png", captureBeyondViewport: true });
+        writeFileSync(join(profile, `categories-${width}.png`), Buffer.from(shot.data, "base64"));
+      }
+    }
+    await click("Nova categoria");
+    await send("Input.dispatchKeyEvent", { type: "keyDown", key: "Escape", code: "Escape", windowsVirtualKeyCode: 27 });
+    await send("Input.dispatchKeyEvent", { type: "keyUp", key: "Escape", code: "Escape", windowsVirtualKeyCode: 27 });
+    await wait("!document.querySelector('dialog[open]') && document.activeElement.textContent==='Nova categoria'");
+    await chooseCompany("b"); await go("/dashboard/categories");
+    await wait("document.body.innerText.includes('Nenhuma categoria cadastrada')");
+    assert(!(await evaluate("document.body.innerText.includes('Vinculada')")), "Switching companies discards category data");
+    setCategoryStatus(401); await navigate("Page.reload");
+    await wait("location.pathname==='/login' && !!document.querySelector('[name=password]')");
+    assert.equal((await sessionCookies()).length, 0, "Category 401 must clear the session");
+    setCategoryStatus(200);
+    console.log("PASS browser categories: protected navigation, active scope, create/edit/delete 204, 409 conflicts, 403 preservation, 401 cleanup, modal focus/Escape, company isolation and responsive screenshots " + profile);
     assert(urls.every((url) => !url.includes("synthetic-password") && !url.includes("synthetic-wrong")), "Passwords must not enter URLs");
     assert.deepEqual(errors, [], "No browser JavaScript exceptions");
     console.log("PASS browser companies: zero/one/multiple companies, native selection/switch, refresh restoration, removal, document cache reset, onboarding boundary, logout/new-session isolation");

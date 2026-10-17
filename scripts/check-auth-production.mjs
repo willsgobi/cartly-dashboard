@@ -21,6 +21,9 @@ const companyFixtures = ["a", "b"].map((id) => ({
 let accessibleCompanies = [companyFixtures[0]];
 const upstreamPaths = [];
 const createdCompanies = [];
+const categories = new Map();
+let categorySequence = 0;
+let categoryStatus = 200;
 const backend = createServer(async (request, response) => {
   upstreamPaths.push(request.url);
   response.setHeader("Content-Type", "application/json");
@@ -49,6 +52,31 @@ const backend = createServer(async (request, response) => {
   } else if (request.url === "/companies" && request.method === "GET") {
     const status = request.headers.authorization === `Bearer ${token}` ? protectedStatus : 401;
     response.writeHead(status).end(JSON.stringify(status === 200 ? accessibleCompanies : { message: "private diagnostic" }));
+  } else if (/^\/companies\/[^/]+\/categories(?:\/[^/]+)?$/.test(request.url)) {
+    const [, , companyId, , categoryId] = request.url.split("/");
+    if (request.headers.authorization !== `Bearer ${token}`) { response.writeHead(401).end("{}"); return; }
+    if (!accessibleCompanies.some((company) => company.id === companyId)) { response.writeHead(403).end("{}"); return; }
+    if (categoryStatus !== 200) { response.writeHead(categoryStatus).end(JSON.stringify({ message: "private category diagnostic" })); return; }
+    const list = categories.get(companyId) ?? [];
+    if (request.method === "GET" && !categoryId) { response.end(JSON.stringify(list)); return; }
+    if (request.method === "DELETE" && categoryId) {
+      const category = list.find((item) => item.id === categoryId);
+      if (!category) { response.writeHead(404).end("{}"); return; }
+      if (category.name === "Vinculada") { response.writeHead(409).end("{}"); return; }
+      categories.set(companyId, list.filter((item) => item.id !== categoryId));
+      response.writeHead(204).end(); return;
+    }
+    if (request.method === "POST" || request.method === "PATCH") {
+      let body = ""; for await (const chunk of request) body += chunk;
+      const input = JSON.parse(body); assert.deepEqual(Object.keys(input), ["name"]);
+      if (list.some((item) => item.name === input.name && item.id !== categoryId)) { response.writeHead(409).end("{}"); return; }
+      const existing = categoryId ? list.find((item) => item.id === categoryId) : undefined;
+      if (categoryId && !existing) { response.writeHead(404).end("{}"); return; }
+      const category = { id: existing?.id ?? `category-${++categorySequence}`, name: input.name, companyId, createdAt: existing?.createdAt ?? "2026-10-17T12:00:00Z", updatedAt: "2026-10-17T12:00:00Z" };
+      categories.set(companyId, [...list.filter((item) => item.id !== category.id), category]);
+      response.writeHead(existing ? 200 : 201).end(JSON.stringify(category)); return;
+    }
+    response.writeHead(405).end("{}");
   } else {
     response.writeHead(404).end("{}");
   }
@@ -174,9 +202,10 @@ try {
       setCompanies: (companies) => { accessibleCompanies = companies; },
       companyFixtures,
       createdCompanies,
+      setCategoryStatus: (status) => { categoryStatus = status; },
     });
   }
-  assert(upstreamPaths.every((path) => path === "/auth/login" || path === "/companies"));
+  assert(upstreamPaths.every((path) => path === "/auth/login" || path === "/companies" || /^\/companies\/[^/]+\/categories(?:\/[^/]+)?$/.test(path)));
   console.log("PASS production auth: login, secure cookies, CSRF, GET 405, protected SSR, forged/expired JWT, 401 cleanup, 403 preservation, no-store, no token leakage, logout");
 } catch (error) {
   console.error(error);
