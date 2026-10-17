@@ -22,11 +22,13 @@ describe("authenticated App Router shell", () => {
     expect(screen.getByRole("link", { name: "Pular para o conteúdo" }).getAttribute("href")).toBe("#dashboard-content");
     expect(screen.getByRole("status").textContent).toBe("Empresa a");
     expect(screen.getByRole("heading", { name: "Dashboard" })).toBeDefined();
+    expect(screen.getByLabelText("Minha conta").closest("aside")).not.toBeNull();
+    expect(screen.getByRole("banner").querySelector("[data-user-menu]")).toBeNull();
   });
   it("supports existing sessions without a stored user name", async () => {
     vi.mocked(getDashboardContext).mockResolvedValue({ kind: "authenticated", companies: [company], activeCompany: company, user: null });
     render(await DashboardLayout({ children: <p>Página</p> }));
-    expect(screen.getByText("Minha conta")).toBeDefined();
+    expect(screen.getByLabelText("Minha conta").textContent).toContain("Minha conta");
   });
   it.each(["denied", "unavailable"] as const)("withholds shell/company/profile data on %s and delegates to the guarded page state", async (kind) => {
     vi.mocked(getDashboardContext).mockResolvedValue({ kind, error: new ApiError("http", { status: 403 }) });

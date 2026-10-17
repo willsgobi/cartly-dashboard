@@ -32,7 +32,7 @@
 .compact { gap: var(--space-1); max-width: 410px; }
 .compact h2, .noCompany { color: var(--color-text-secondary); font-size: var(--font-size-sm); font-weight: var(--font-weight-regular); }
 .compact > p { font-weight: var(--font-weight-semibold); overflow-wrap: anywhere; }
-.compact .form { grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-2); align-items: start; }
+.compact .form { grid-template-columns: minmax(0, 1fr); gap: var(--space-2); align-items: start; }
 .compact .form label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
 .compact .form .error { grid-column: 1 / -1; }
 @media (max-width: 35rem) { .compact { width: 100%; } .compact .form { grid-template-columns: minmax(0, 1fr); } }

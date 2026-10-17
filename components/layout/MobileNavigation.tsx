@@ -5,9 +5,10 @@ import { usePathname } from "next/navigation";
 import { Button } from "../ui/Button";
 import { Sidebar } from "./Sidebar";
 import { NavigationIcon } from "./NavigationIcon";
+import type { DisplayUser } from "../../lib/auth/display-user";
 import styles from "./dashboard.module.scss";
 
-export function MobileNavigation() {
+export function MobileNavigation({ user = null }: { user?: DisplayUser | null }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
@@ -38,7 +39,7 @@ export function MobileNavigation() {
     }} onClick={(event) => { if (event.target === event.currentTarget) close(); }}>
       <div className={styles.drawerPanel}>
         <Button className={styles.drawerClose} variant="outline" aria-label="Fechar menu de navegação" onClick={close}><NavigationIcon name="close" /></Button>
-        <Sidebar onNavigate={close} />
+        <Sidebar onNavigate={close} user={user} />
       </div>
     </dialog>
   </>;

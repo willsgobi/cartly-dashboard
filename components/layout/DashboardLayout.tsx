@@ -12,7 +12,7 @@ export async function DashboardLayout({ children }: { children: ReactNode }) {
   return <ActiveCompanyProvider companies={context.companies} activeCompany={context.activeCompany}>
     <div className={styles.shell}>
       <a href="#dashboard-content" className={styles.skipLink}>Pular para o conteúdo</a>
-      <aside className={styles.desktopSidebar} aria-label="Barra lateral"><Sidebar /></aside>
+      <aside className={styles.desktopSidebar} aria-label="Barra lateral"><Sidebar user={context.user} /></aside>
       <div className={styles.workspace}><DashboardHeader user={context.user} /><main id="dashboard-content" tabIndex={-1} className={styles.content}>{children}</main></div>
     </div>
   </ActiveCompanyProvider>;

@@ -14,7 +14,7 @@ features/companies/server-context.ts memoizes one authoritative guard/list resul
 
 ## Navigation and responsive behavior
 
-Desktop uses a 256px sidebar and a flexible content column. Below 64rem the sidebar is hidden and the header exposes a modal navigation drawer with the same Sidebar component. Header actions wrap/adapt for tablet/mobile widths; content and long names use constrained flexible columns and wrapping, without horizontal scrolling at 320/390/768/1280px.
+Desktop uses a 224px sidebar and a flexible content column. Below 64rem the sidebar is hidden and the header exposes a modal navigation drawer with the same Sidebar component. Header actions wrap/adapt for tablet/mobile widths; content and long names use constrained flexible columns and wrapping, without horizontal scrolling at 320/390/768/1280px.
 
 The navigation lists Dashboard, Pedidos, Produtos, Categorias, Clientes, Usuários, Relatórios and Configurações. Only Dashboard has a real link; its exact route receives aria-current=page. All unavailable modules are noninteractive aria-disabled text with Em breve, not links to nonexistent pages. No role/permission rule, business page, analytics data or backend operation is invented.
 
@@ -23,6 +23,8 @@ The protected landing page greets the user using the available login display sna
 ## Company and account integration
 
 DashboardHeader reuses F06 CompanySelector in a compact presentation; no selection or persistence logic is duplicated. A single company is automatic, multiple companies use the existing native POST /api/companies/active, and zero companies show a neutral header while the page redirects to onboarding. That POST still revalidates membership, sets the existing session-bound preference and reloads the document, discarding prior company state. ActiveCompanyProvider wraps the shell/page slot and keys its subtree by selected company ID.
+
+Selecting a different company immediately submits that same validated POST; there is no confirmation button. The pending state disables selection and prevents duplicate submissions. Selecting the current company does nothing. A separator below the sidebar navigation introduces Minha conta, which reuses the existing account disclosure and local logout exclusively in desktop and mobile sidebars. The header contains only company selection alongside its heading/mobile navigation trigger. The account disclosure uses a centered decorative SVG chevron instead of a font glyph.
 
 F03 login already returns SafeUserResponseDto but previously retained only the JWT. F08 preserves just name/email in a separate HttpOnly host-only display cookie, Secure in production and bounded by the same JWT expiration. Its HMAC uses the current server-only JWT as key and a dedicated display-data domain, so altered/foreign-session snapshots are ignored without introducing an environment secret. This does not verify JWT authenticity, authenticate a user or grant permissions. Rendering still requires the backend-authoritative guard. Tokens/signatures are never passed as layout props or rendered in HTML. See [../session-management.md](../session-management.md).
 

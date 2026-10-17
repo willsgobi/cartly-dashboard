@@ -85,7 +85,11 @@ export async function checkAuthBrowser(origin, { setProtectedStatus, setCompanie
       await send("Input.insertText", { text });
     };
     const click = async (text) => {
-      if (text === "Sair") await evaluate("(()=>{if(![...document.querySelectorAll('button')].some(e=>e.getClientRects().length&&e.textContent.trim()==='Sair'))document.querySelector('[data-user-menu] summary')?.click()})()");
+      if (text === "Sair") {
+        await evaluate("(()=>{if(![...document.querySelectorAll('[data-user-menu] summary')].some(e=>e.getClientRects().length))document.querySelector('[aria-label=\"Abrir menu de navegação\"]')?.click()})()");
+        await wait("[...document.querySelectorAll('[data-user-menu] summary')].some(e=>e.getClientRects().length)");
+        await evaluate("(()=>{if(![...document.querySelectorAll('button')].some(e=>e.getClientRects().length&&e.textContent.trim()==='Sair'))[...document.querySelectorAll('[data-user-menu] summary')].find(e=>e.getClientRects().length)?.click()})()");
+      }
       await wait(`[...document.querySelectorAll('button,a')].some(e=>e.getClientRects().length&&!e.disabled&&e.textContent.trim()===${JSON.stringify(text)})`);
       await evaluate(`(()=>{const b=[...document.querySelectorAll('button,a')].find(e=>e.getClientRects().length&&e.textContent.trim()===${JSON.stringify(text)});if(!b)throw new Error('Missing control');b.click()})()`);
     };
@@ -174,14 +178,12 @@ export async function checkAuthBrowser(origin, { setProtectedStatus, setCompanie
       await evaluate(`(()=>{const e=document.querySelector('select[name=companyId]');e.value=${JSON.stringify(id)};e.dispatchEvent(new Event('change',{bubbles:true}))})()`);
     };
     await select("b");
-    await click("Continuar");
     await wait("document.querySelector('[role=status]')?.textContent==='Empresa b'");
     assert((await send("Storage.getCookies")).cookies.some((cookie) => cookie.name === "__Host-cartly_company" && cookie.httpOnly && cookie.secure));
     await navigate("Page.reload");
     assert.equal(await evaluate("document.querySelector('select').value"), "b", "Verified preference must restore after refresh");
     await evaluate("window.companySpecificCachedData='old-company-b'");
     await select("a");
-    await click("Trocar empresa");
     await wait("document.querySelector('[role=status]')?.textContent==='Empresa a'");
     assert(await evaluate("window.companySpecificCachedData===undefined"), "Full navigation must discard the previous company cache");
     setCompanies([companyFixtures[1]]);
@@ -252,7 +254,7 @@ export async function checkAuthBrowser(origin, { setProtectedStatus, setCompanie
       assert.equal(await evaluate("document.activeElement.getAttribute('aria-label')"), "Abrir menu de navegação");
     };
     await openDrawer();
-    await evaluate("document.querySelector('[data-user-menu] summary').focus()");
+    await evaluate("document.querySelector('header select').focus()");
     assert(await evaluate("document.querySelector('dialog').contains(document.activeElement)"), "Modal must keep background inert");
     await send("Input.dispatchKeyEvent", { type: "keyDown", key: "Tab", code: "Tab", windowsVirtualKeyCode: 9 });
     await send("Input.dispatchKeyEvent", { type: "keyUp", key: "Tab", code: "Tab", windowsVirtualKeyCode: 9 });
@@ -263,6 +265,8 @@ export async function checkAuthBrowser(origin, { setProtectedStatus, setCompanie
     await send("Input.dispatchKeyEvent", { type: "keyUp", key: "Escape", code: "Escape", windowsVirtualKeyCode: 27 });
     await closedDrawer();
     await openDrawer();
+    await evaluate("document.querySelector('dialog [aria-label=\"Minha conta\"]').click()");
+    assert(await evaluate("document.querySelector('dialog').innerText.includes('test@example.com')"), "Mobile Minha conta must show the existing profile controls");
     await click("Dashboard");
     await closedDrawer();
     await openDrawer();
@@ -279,6 +283,10 @@ export async function checkAuthBrowser(origin, { setProtectedStatus, setCompanie
     }
     assert(await evaluate("!!document.querySelector('aside nav a[aria-current=page]')"), "Desktop navigation must highlight the dashboard");
     assert.equal(await evaluate("document.querySelectorAll('aside nav a').length"), 1, "Unimplemented modules must not be links");
+    assert.equal(await evaluate("document.querySelector('aside').getBoundingClientRect().width"), 224, "Desktop sidebar must use the reduced width");
+    assert(await evaluate("!!document.querySelector('aside [aria-label=\"Minha conta\"]')"));
+    assert(await evaluate("![...document.querySelectorAll('header [data-user-menu]')].some(element => !element.closest('dialog'))"), "Account controls must appear only in the sidebar");
+    assert(await evaluate("(()=>{const summary=document.querySelector('aside summary');const arrow=summary.lastElementChild.getBoundingClientRect();const row=summary.getBoundingClientRect();return Math.abs(arrow.top+arrow.height/2-row.top-row.height/2)<1})()"), "Account chevron must be vertically centered");
     console.log("PASS dashboard shell: safe welcome/user menu, active company header, responsive sidebar/drawer, Escape, focus restoration, inert background, overlay and navigation close; screenshots " + profile);
     assert(urls.every((url) => !url.includes("synthetic-password") && !url.includes("synthetic-wrong")), "Passwords must not enter URLs");
     assert.deepEqual(errors, [], "No browser JavaScript exceptions");

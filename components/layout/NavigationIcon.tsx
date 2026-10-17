@@ -1,4 +1,4 @@
-export type IconName = "dashboard" | "orders" | "products" | "categories" | "customers" | "users" | "reports" | "settings" | "menu" | "close";
+export type IconName = "dashboard" | "orders" | "products" | "categories" | "customers" | "users" | "reports" | "settings" | "menu" | "close" | "chevronDown";
 const paths: Record<IconName, string> = {
   dashboard: "M3 3h7v7H3z M14 3h7v7h-7z M3 14h7v7H3z M14 14h7v7h-7z",
   orders: "M5 4h14v17l-3-2-4 2-4-2-3 2z M9 8h6 M9 12h6",
@@ -10,6 +10,7 @@ const paths: Record<IconName, string> = {
   settings: "M9 3h6l1 4 4 2v6l-4 2-1 4H9l-1-4-4-2V9l4-2z M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0",
   menu: "M3 6h18 M3 12h18 M3 18h18",
   close: "M6 6l12 12 M6 18L18 6",
+  chevronDown: "M6 9l6 6 6-6",
 };
 
 export function NavigationIcon({ name }: { name: IconName }) {

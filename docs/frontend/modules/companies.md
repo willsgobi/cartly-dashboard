@@ -8,7 +8,7 @@ F03's existing checkSessionAccess now retains the decoded companies on its serve
 
 ## Navigation and UI
 
-- F08 places the same company selector in the dashboard header and the existing logout action in the account disclosure. The accessible native select lists company names/documents; it retains React Hook Form/Zod, field errors and pending/disabled states. The server-rendered landing page displays the same verified selection.
+- F08 places the same company selector in the dashboard header and the existing logout action in the account disclosure. The accessible native select lists company names/documents; it retains React Hook Form/Zod, field errors and pending/disabled states. Selecting a different company immediately submits the existing native POST without a confirmation button; duplicate submissions and unchanged selections are ignored. The server-rendered landing page displays the same verified selection.
 - Zero companies redirect to /dashboard/onboarding. F07 renders the protected creation form there, retaining retry/logout. Dashboard users with existing companies can also open that form through Criar nova empresa and return without changing selection. Successful creation verifies and activates the new company. See [onboarding.md](onboarding.md).
 - One company is automatically active on every verified render. Multiple companies require a valid stored preference or an explicit choice. An invalid, malformed, removed or foreign-session preference is ignored; no arbitrary first company is chosen.
 - Denied/unavailable list access withholds company data and shows a safe error (with retry for unavailable). Existing 401 handling redirects to login and clears invalid cookies. 403 preserves the session. Suspense supplies a non-sensitive loading state.

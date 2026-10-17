@@ -5,6 +5,7 @@ import userEvent from "@testing-library/user-event";
 import { ActiveCompanyProvider } from "../companies/ActiveCompanyContext";
 import { DashboardHeader } from "../../components/layout/DashboardHeader";
 import { SidebarNavigation } from "../../components/layout/SidebarNavigation";
+import { Sidebar } from "../../components/layout/Sidebar";
 
 const { location } = vi.hoisted(() => ({ location: { pathname: "/dashboard" } }));
 vi.mock("next/navigation", () => ({ usePathname: () => location.pathname }));
@@ -81,13 +82,24 @@ describe("dashboard shell", () => {
     expect(screen.queryByRole("dialog")).toBeNull();
   });
   it("provides user details and the existing native logout through the account disclosure", async () => {
-    render(header());
-    await userEvent.setup().click(screen.getByLabelText("Menu da conta"));
-    expect(screen.getByText(user.email)).toBeDefined();
+    render(<Sidebar user={user} />);
+    await userEvent.setup().click(screen.getByLabelText("Minha conta"));
+    const account = screen.getByLabelText("Minha conta").closest("details");
+    if (!account) throw new Error("Missing account disclosure");
+    expect(within(account).getByText(user.email)).toBeDefined();
     const form = screen.getByRole("button", { name: "Sair" }).closest("form");
     expect(form?.getAttribute("action")).toBe("/api/auth/logout");
     expect(form?.getAttribute("method")).toBe("post");
-    fireEvent.keyDown(screen.getByLabelText("Menu da conta"), { key: "Escape" });
-    expect(screen.getByLabelText("Menu da conta").closest("details")).toHaveProperty("open", false);
+    fireEvent.keyDown(screen.getByLabelText("Minha conta"), { key: "Escape" });
+    expect(screen.getByLabelText("Minha conta").closest("details")).toHaveProperty("open", false);
+  });
+  it("provides Minha conta in the reused mobile sidebar with the existing account/logout controls", async () => {
+    render(header());
+    const actor = userEvent.setup();
+    await actor.click(screen.getByRole("button", { name: "Abrir menu de navegação" }));
+    const drawer = within(screen.getByRole("dialog"));
+    await actor.click(drawer.getByLabelText("Minha conta"));
+    expect(drawer.getByText(user.email)).toBeDefined();
+    expect(drawer.getByRole("button", { name: "Sair" }).closest("form")?.getAttribute("action")).toBe("/api/auth/logout");
   });
 });
