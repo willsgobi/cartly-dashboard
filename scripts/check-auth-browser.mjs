@@ -7,7 +7,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 /** Actual browser cookie/history checks complement the production HTTP assertions. */
-export async function checkAuthBrowser(origin, { setProtectedStatus, setCompanies, companyFixtures, createdCompanies, setCategoryStatus }) {
+export async function checkAuthBrowser(origin, { setProtectedStatus, setCompanies, companyFixtures, createdCompanies, setCategoryStatus, setProductStatus, products, getProductCategory }) {
   const chrome = process.env.CHROME_PATH ?? "C:/Program Files/Google/Chrome/Application/chrome.exe";
   assert(existsSync(chrome), "Set CHROME_PATH to a local Chrome/Chromium executable");
   const reservation = createServer();
@@ -286,7 +286,7 @@ export async function checkAuthBrowser(origin, { setProtectedStatus, setCompanie
       }
     }
     assert(await evaluate("!!document.querySelector('aside nav a[aria-current=page]')"), "Desktop navigation must highlight the dashboard");
-    assert.equal(await evaluate("document.querySelectorAll('aside nav a').length"), 2, "Only implemented modules must be links");
+    assert.equal(await evaluate("document.querySelectorAll('aside nav a').length"), 3, "Only implemented modules must be links");
     assert.equal(await evaluate("document.querySelector('aside').getBoundingClientRect().width"), 224, "Desktop sidebar must use the reduced width");
     assert(await evaluate("!!document.querySelector('aside [aria-label=\"Minha conta\"]')"));
     assert(await evaluate("![...document.querySelectorAll('header [data-user-menu]')].some(element => !element.closest('dialog'))"), "Account controls must appear only in the sidebar");
@@ -357,6 +357,55 @@ export async function checkAuthBrowser(origin, { setProtectedStatus, setCompanie
     assert.equal((await sessionCookies()).length, 0, "Category 401 must clear the session");
     setCategoryStatus(200);
     console.log("PASS browser categories: protected navigation, active scope, create/edit/delete 204, 409 conflicts, 403 preservation, 401 cleanup, modal focus/Escape, company isolation and responsive screenshots " + profile);
+    // F10: numeric prices, exact upstream company placement and physical records retained on delete.
+    setCompanies([companyFixtures[0]]); await go("/login"); await signIn();
+    await click("Produtos");
+    await wait("location.pathname==='/dashboard/products' && document.querySelector('h1')?.textContent==='Produtos' && document.body.innerText.includes('Nenhum produto cadastrado')");
+    await click("Novo produto"); await wait("!!document.querySelector('dialog[open] [name=name]')");
+    await click("Criar produto"); await wait("document.body.innerText.includes('Informe o nome do produto.')");
+    await fill("name", "Produto teste"); await fill("description", "Descrição do produto"); await fill("price", "12,50");
+    await evaluate("(()=>{const select=document.querySelector('dialog[open] select');select.value=select.options[1].value;select.dispatchEvent(new Event('change',{bubbles:true}))})()");
+    await click("Criar produto");
+    await wait("!document.querySelector('dialog[open]') && !!document.querySelector('[aria-label=\"Editar Produto teste\"]:not(:disabled)')");
+    assert.equal(products.length, 1); assert.equal(products[0].price, 12.5); assert.equal(products[0].type, "NORMAL");
+    await fill("search", "nonexistent");
+    await wait("document.body.innerText.includes('Nenhum produto encontrado')");
+    await evaluate("(()=>{const input=document.querySelector('input[type=search]');input.focus();input.select()})()");
+    await send("Input.dispatchKeyEvent", { type: "keyDown", key: "Backspace", code: "Backspace", windowsVirtualKeyCode: 8 });
+    await send("Input.dispatchKeyEvent", { type: "keyUp", key: "Backspace", code: "Backspace", windowsVirtualKeyCode: 8 });
+    await wait("!!document.querySelector('[aria-label=\"Editar Produto teste\"]')");
+    await evaluate("document.querySelector('[aria-label=\"Editar Produto teste\"]').click()");
+    await fill("name", "Produto atualizado"); await click("Salvar alterações");
+    await wait("!document.querySelector('dialog[open]') && !!document.querySelector('[aria-label=\"Editar Produto atualizado\"]:not(:disabled)')");
+    const category = getProductCategory(); assert(category);
+    for (const type of ["VARIANT", "VARIANT_WITH_PRICE"]) products.push({ id: type, name: type === "VARIANT" ? "Camiseta" : "Pizza", description: null, companyId: "a", categoryId: category.id, category: { id: category.id, name: category.name }, type, price: type === "VARIANT" ? 25 : null, variants: [{ id: `${type}-v`, name: "Pequena", price: type === "VARIANT" ? null : 19.5 }], createdAt: "2026-10-17T12:00:00Z", updatedAt: "2026-10-17T12:00:00Z" });
+    await navigate("Page.reload"); await wait("!!document.querySelector('[aria-label=\"Detalhes de Pizza\"]:not(:disabled)')");
+    await evaluate("document.querySelector('[aria-label=\"Detalhes de Pizza\"]').click()");
+    await wait("document.querySelector('dialog[open]')?.innerText.includes('19,50')"); await click("Fechar");
+    for (const width of [320, 390, 768, 1280]) {
+      await send("Emulation.setDeviceMetricsOverride", { width, height: 1000, deviceScaleFactor: 1, mobile: width < 640 });
+      assert(await evaluate("document.documentElement.scrollWidth<=innerWidth"), `Product overflow at ${width}px`);
+      if (width === 390 || width === 1280) { const shot = await send("Page.captureScreenshot", { format: "png", captureBeyondViewport: true }); writeFileSync(join(profile, `products-${width}.png`), Buffer.from(shot.data, "base64")); }
+    }
+    await click("Novo produto"); await wait("!!document.querySelector('dialog[open] [name=name]')");
+    await send("Emulation.setDeviceMetricsOverride", { width: 390, height: 1000, deviceScaleFactor: 1, mobile: true });
+    assert(await evaluate("document.documentElement.scrollWidth<=innerWidth && document.querySelector('dialog[open]').scrollWidth<=document.querySelector('dialog[open]').clientWidth"), "Product form must fit mobile width");
+    const productFormShot = await send("Page.captureScreenshot", { format: "png" });
+    writeFileSync(join(profile, "product-form-390.png"), Buffer.from(productFormShot.data, "base64"));
+    await click("Cancelar");
+    await send("Emulation.setDeviceMetricsOverride", { width: 1280, height: 1000, deviceScaleFactor: 1, mobile: false });
+    setProductStatus(403);
+    await evaluate("document.querySelector('[aria-label=\"Excluir Produto atualizado\"]').click()"); await click("Excluir produto");
+    await wait("document.querySelector('dialog[open]')?.innerText.includes('Você não tem permissão')"); assert.equal((await sessionCookies()).length, 1);
+    setProductStatus(200); await click("Excluir produto");
+    await wait("!document.querySelector('dialog[open]') && !document.querySelector('[aria-label=\"Editar Produto atualizado\"]')");
+    assert(products[0].deletedAt, "Soft delete must retain the original record");
+    setCompanies(companyFixtures); await go("/dashboard/products");
+    await wait("document.body.innerText.includes('Selecione uma empresa no cabeçalho')");
+    await chooseCompany("b"); await go("/dashboard/products"); await wait("document.body.innerText.includes('Nenhum produto cadastrado')");
+    assert(!(await evaluate("document.body.innerText.includes('Pizza')")));
+    setProductStatus(401); await navigate("Page.reload"); await wait("location.pathname==='/login'"); assert.equal((await sessionCookies()).length, 0); setProductStatus(200);
+    console.log("PASS browser products: NORMAL create/numeric BRL, local search, details/variants, partial edit, soft DELETE with company JSON, 403 preservation, 401 cleanup, company isolation and responsive screenshots " + profile);
     assert(urls.every((url) => !url.includes("synthetic-password") && !url.includes("synthetic-wrong")), "Passwords must not enter URLs");
     assert.deepEqual(errors, [], "No browser JavaScript exceptions");
     console.log("PASS browser companies: zero/one/multiple companies, native selection/switch, refresh restoration, removal, document cache reset, onboarding boundary, logout/new-session isolation");

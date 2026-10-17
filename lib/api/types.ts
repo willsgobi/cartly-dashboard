@@ -1,4 +1,5 @@
 import type { paths } from "./generated/schema";
+import type { ProductCreateRequest, ProductUpdateRequest } from "./product-compatibility";
 
 export type HttpMethod = "GET" | "POST" | "PATCH" | "DELETE";
 
@@ -66,6 +67,12 @@ export type ApiSuccessBody<
 
 export type ResponseDecoder<Value> = (value: unknown) => Value;
 
+type CompatibleBodyOption<Method, Path, Op> = Method extends "POST"
+  ? Path extends "/products" ? { body: ProductCreateRequest } : BodyOption<Op>
+  : Method extends "PATCH"
+    ? Path extends "/products/{productId}" ? { body: ProductUpdateRequest } : BodyOption<Op>
+    : BodyOption<Op>;
+
 export type ApiRequestOptions<
   Method extends HttpMethod,
   Path extends ApiPath<Method>,
@@ -75,4 +82,4 @@ export type ApiRequestOptions<
   headers?: HeadersInit;
 } & ParameterOption<"pathParams", ParametersAt<Operation<Method, Path>, "path">>
   & ParameterOption<"query", ParametersAt<Operation<Method, Path>, "query">>
-  & BodyOption<Operation<Method, Path>>;
+  & CompatibleBodyOption<Method, Path, Operation<Method, Path>>;

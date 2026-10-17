@@ -24,6 +24,9 @@ const createdCompanies = [];
 const categories = new Map();
 let categorySequence = 0;
 let categoryStatus = 200;
+const products = [];
+let productSequence = 0;
+let productStatus = 200;
 const backend = createServer(async (request, response) => {
   upstreamPaths.push(request.url);
   response.setHeader("Content-Type", "application/json");
@@ -77,6 +80,39 @@ const backend = createServer(async (request, response) => {
       response.writeHead(existing ? 200 : 201).end(JSON.stringify(category)); return;
     }
     response.writeHead(405).end("{}");
+  } else if (/^\/products(?:\/[^/?]+)?(?:\?companyId=[^&]+)?$/.test(request.url)) {
+    if (request.headers.authorization !== `Bearer ${token}`) { response.writeHead(401).end("{}"); return; }
+    if (productStatus !== 200) { response.writeHead(productStatus).end(JSON.stringify({ message: "private product diagnostic" })); return; }
+    const url = new URL(request.url, "http://mock.invalid");
+    const productId = url.pathname.split("/")[2];
+    let input;
+    if (request.method !== "GET") { let body = ""; for await (const chunk of request) body += chunk; input = JSON.parse(body); }
+    const companyId = request.method === "GET" ? url.searchParams.get("companyId") : input.companyId;
+    assert(companyId, "All product operations require company context");
+    if (!accessibleCompanies.some((company) => company.id === companyId)) { response.writeHead(403).end("{}"); return; }
+    const product = products.find((item) => item.id === productId && item.companyId === companyId && !item.deletedAt);
+    if (request.method === "GET") {
+      if (productId && !product) { response.writeHead(404).end("{}"); return; }
+      response.end(JSON.stringify(productId ? product : products.filter((item) => item.companyId === companyId && !item.deletedAt))); return;
+    }
+    if (request.method === "DELETE") {
+      assert.deepEqual(Object.keys(input), ["companyId"]);
+      if (!product) { response.writeHead(404).end("{}"); return; }
+      product.deletedAt = "2026-10-17T12:00:00Z";
+      response.end(JSON.stringify({ message: "Product deleted successfully." })); return;
+    }
+    assert(!("variants" in input), "F10 must never submit variants");
+    if (input.price !== undefined && input.price !== null) assert.equal(typeof input.price, "number");
+    const category = (categories.get(companyId) ?? []).find((item) => item.id === (input.categoryId ?? product?.categoryId));
+    if (!category) { response.writeHead(404).end("{}"); return; }
+    if (request.method === "POST") {
+      assert.equal(input.type, "NORMAL");
+      assert.deepEqual(Object.keys(input).sort(), ["categoryId", "companyId", "description", "name", "price", "type"]);
+      const created = { ...input, id: `product-${++productSequence}`, category: { id: category.id, name: category.name }, variants: [], createdAt: "2026-10-17T12:00:00Z", updatedAt: "2026-10-17T12:00:00Z" };
+      products.push(created); response.writeHead(201).end(JSON.stringify(created)); return;
+    }
+    if (request.method === "PATCH" && product) { Object.assign(product, input, { category: { id: category.id, name: category.name } }); response.end(JSON.stringify(product)); return; }
+    response.writeHead(404).end("{}");
   } else {
     response.writeHead(404).end("{}");
   }
@@ -203,9 +239,12 @@ try {
       companyFixtures,
       createdCompanies,
       setCategoryStatus: (status) => { categoryStatus = status; },
+      setProductStatus: (status) => { productStatus = status; },
+      products,
+      getProductCategory: () => (categories.get("a") ?? [])[0],
     });
   }
-  assert(upstreamPaths.every((path) => path === "/auth/login" || path === "/companies" || /^\/companies\/[^/]+\/categories(?:\/[^/]+)?$/.test(path)));
+  assert(upstreamPaths.every((path) => path === "/auth/login" || path === "/companies" || /^\/companies\/[^/]+\/categories(?:\/[^/]+)?$/.test(path) || /^\/products(?:\/[^/?]+)?(?:\?companyId=[^&]+)?$/.test(path)));
   console.log("PASS production auth: login, secure cookies, CSRF, GET 405, protected SSR, forged/expired JWT, 401 cleanup, 403 preservation, no-store, no token leakage, logout");
 } catch (error) {
   console.error(error);

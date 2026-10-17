@@ -1,11 +1,8 @@
 import "server-only";
 import { NextResponse, type NextRequest } from "next/server";
-import { authenticatedRequest } from "../../lib/auth/authenticated-api";
 import { authenticatedErrorResponse } from "../../lib/auth/handlers";
-import { requireSessionToken, sessionCookieName } from "../../lib/auth/session";
 import { assertSameOrigin, noStore } from "../../lib/auth/security";
-import { companyCookieName, resolveActiveCompany } from "../../lib/companies/selection";
-import { decodeCompanyList } from "../../lib/api/companies";
+import { requireActiveCompany } from "../../lib/companies/active-request";
 import { ApiError } from "../../lib/api/errors";
 import { readJsonInput } from "../../lib/api/read-json";
 import { categoryFormSchema, updateCategorySchema } from "./schemas";
@@ -15,12 +12,7 @@ import { createCategory, deleteCategory, listCategories, updateCategory } from "
 export async function handleCategories(request: NextRequest, categoryId?: string): Promise<NextResponse> {
   try {
     if (request.method !== "GET") assertSameOrigin(request);
-    const token = requireSessionToken(request.cookies.get(sessionCookieName())?.value);
-    const companies = await authenticatedRequest(token, "GET", "/companies", { signal: request.signal, decode: decodeCompanyList });
-    if (!companies) throw new ApiError("invalid-response");
-    const company = resolveActiveCompany(companies, token, request.cookies.get(companyCookieName())?.value);
-    // The browser sends its rendered scope only as a stale-document check, never as authorization.
-    if (!company || request.nextUrl.searchParams.get("companyId") !== company.id) throw new ApiError("http", { status: 403 });
+    const { token, company } = await requireActiveCompany(request);
     const method = request.method;
     if (method === "GET" && categoryId === undefined) return noStore(NextResponse.json(await listCategories(token, company.id, request.signal)));
     if (method === "DELETE" && categoryId) {

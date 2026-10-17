@@ -29,6 +29,7 @@ function header(single = false) {
 describe("dashboard shell", () => {
   it.each([
     ["/dashboard/categories", "Categorias"],
+    ["/dashboard/products", "Produtos"],
     ["/dashboard/onboarding", "Nova empresa"],
     ["/dashboard", "Dashboard"],
   ])("hydrates the shared layout at %s without mismatched route text or attributes", async (pathname, title) => {
@@ -67,11 +68,12 @@ describe("dashboard shell", () => {
     render(<SidebarNavigation />);
     expect(screen.getByRole("link", { name: "Dashboard" }).getAttribute("aria-current")).toBe("page");
     expect(screen.getByRole("link", { name: "Categorias" }).getAttribute("href")).toBe("/dashboard/categories");
-    for (const label of ["Pedidos", "Produtos", "Clientes", "Usuários", "Relatórios", "Configurações"]) {
+    expect(screen.getByRole("link", { name: "Produtos" }).getAttribute("href")).toBe("/dashboard/products");
+    for (const label of ["Pedidos", "Clientes", "Usuários", "Relatórios", "Configurações"]) {
       expect(screen.getByText(label).closest("[aria-disabled]")).not.toBeNull();
       expect(screen.queryByRole("link", { name: label })).toBeNull();
     }
-    expect(screen.getAllByText("Em breve")).toHaveLength(6);
+    expect(screen.getAllByText("Em breve")).toHaveLength(5);
   });
   it("does not mark Dashboard active on the company creation route", () => {
     location.pathname = "/dashboard/onboarding";

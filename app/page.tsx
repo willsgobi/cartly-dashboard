@@ -1,7 +1,6 @@
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import styles from "./page.module.scss";
-import Logo from "../public/logo.svg";
 
 export default function Home() {
   return (

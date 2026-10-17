@@ -1,23 +1,10 @@
 import { ApiError } from "../../lib/api/errors";
+import { browserRequest } from "../../lib/api/browser-request";
 import { decodeCategories, decodeCategory, type CreateCategory, type UpdateCategory } from "./schemas";
 
 async function request(companyId: string, method: "GET" | "POST" | "PATCH" | "DELETE", categoryId?: string, body?: CreateCategory | UpdateCategory, signal?: AbortSignal): Promise<unknown> {
   const path = `/api/categories${categoryId === undefined ? "" : `/${encodeURIComponent(categoryId)}`}?${new URLSearchParams({ companyId })}`;
-  let response: Response;
-  try {
-    response = await fetch(path, {
-      method, signal, credentials: "same-origin", cache: "no-store", redirect: "error",
-      headers: { Accept: "application/json", ...(body ? { "Content-Type": "application/json" } : {}) },
-      ...(body ? { body: JSON.stringify(body) } : {}),
-    });
-  } catch { throw new ApiError(signal?.aborted ? "aborted" : "network"); }
-  if (!response.ok) {
-    if (response.status === 401) window.location.replace("/login?reason=expired&returnTo=%2Fdashboard%2Fcategories");
-    throw new ApiError("http", { status: response.status });
-  }
-  if (response.status === 204) return undefined;
-  try { const data: unknown = await response.json(); return data; }
-  catch { throw new ApiError("invalid-response"); }
+  return browserRequest(path, method, "/dashboard/categories", body, signal);
 }
 
 export async function fetchCategories(companyId: string, signal: AbortSignal) {

@@ -21,6 +21,11 @@ it("keeps generated required, optional, nullable and ambiguous fields", () => {
 
 // Compiled by tsc, never invoked; no HTTP calls or session flows are implemented.
 export function checkContractConstraints(client: ApiClient) {
+  // F10's explicit runtime compatibility override accepts numeric product prices only here.
+  client.request("POST", "/products", { body: { name: "Name", type: "NORMAL", companyId: "c", categoryId: "d", price: 12.5 } });
+  client.request("PATCH", "/products/{productId}", { pathParams: { productId: "p" }, body: { companyId: "c", price: null } });
+  // @ts-expect-error Compatibility must not accept object-valued monetary input.
+  client.request("PATCH", "/products/{productId}", { pathParams: { productId: "p" }, body: { companyId: "c", price: {} } });
   // @ts-expect-error There is no GET category detail operation.
   client.request("GET", "/companies/{companyId}/categories/{categoryId}", { pathParams: { companyId: "c", categoryId: "d" } });
   // @ts-expect-error Company-scoped product queries require companyId.

@@ -21,5 +21,7 @@ F09 adds category service/BFF, browser adapter, protected workspace and CRUD com
 - Integration: login/onboarding, company switch cache invalidation, list/create/edit/delete products and category restrictions with realistic mocked responses.
 - E2E: auth flow; zero-company onboarding; multi-company switching; create/edit product; permission/401/403 flows when supported by the API test environment.
 
+F10 adds product schema, service/BFF, browser adapter, protected workspace and CRUD/filter/detail tests. Compatibility type tests retain raw Swagger ambiguity while proving numeric product request support and rejecting object-valued prices. Existing F09 tests verify extracted shared transport/company checks. Production Chrome checks actual product BFF requests against isolated mock NestJS, numeric NORMAL creation, partial edits, existing variants, soft DELETE with JSON body, responsive list/form, company isolation and 401/403 behavior; no variant mutation endpoint is allowed by the fixture inventory.
+
 ## Definition of done
 Task acceptance criteria met; lint and TS pass; tests covering introduced logic pass; inspect accessibility and mobile behavior; no invented endpoints; document known failures. Add test scripts when tooling installed, not before. Isolate fixtures and never use live production data.

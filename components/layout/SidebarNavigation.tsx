@@ -7,7 +7,7 @@ import styles from "./dashboard.module.scss";
 
 const items: { label: string; icon: IconName; href?: string }[] = [
   { label: "Dashboard", icon: "dashboard", href: "/dashboard" },
-  { label: "Pedidos", icon: "orders" }, { label: "Produtos", icon: "products" },
+  { label: "Pedidos", icon: "orders" }, { label: "Produtos", icon: "products", href: "/dashboard/products" },
   { label: "Categorias", icon: "categories", href: "/dashboard/categories" }, { label: "Clientes", icon: "customers" },
   { label: "Usuários", icon: "users" }, { label: "Relatórios", icon: "reports" },
   { label: "Configurações", icon: "settings" },

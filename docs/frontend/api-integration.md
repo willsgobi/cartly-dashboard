@@ -65,6 +65,8 @@ Run `npm run api:generate` after an authorized contract update. Commit the gener
 
 The current price declarations remain `Record<string, never> | null` (optional where specified); they are **not** converted to numbers from examples. Variant response prices remain `number | null`. The malformed variant PATCH path is retained exactly. Two DELETE success schemas contain examples without property definitions, so their JSON bodies remain `unknown`; an example alone does not establish a response DTO. These issues still require backend clarification before affected services or pricing forms are implemented.
 
+F10 explicitly authorizes product numeric/null models. Inspected local NestJS DTOs and repository conversions establish that representation; lib/api/product-compatibility.ts now supplies a narrow price override for POST /products and PATCH /products/{productId} request options only. Generated response types remain untouched; F10 decodes unknown responses with numeric runtime schemas. This does not alter variant operations or infer a precision policy. See [modules/products.md](modules/products.md) for evidence, source/snapshot differences and live validation limits.
+
 ### Environment configuration
 
 Copy `.env.example` to `.env.local` and replace `API_BASE_URL` with the actual development backend URL. In production, set the same variable in the deployment environment. Use the appropriate HTTPS endpoint for browser/public production traffic; HTTP is also supported for local development or private network deployments.
