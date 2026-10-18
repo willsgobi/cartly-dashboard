@@ -1,5 +1,5 @@
 import type { paths } from "./generated/schema";
-import type { ProductCreateRequest, ProductUpdateRequest } from "./product-compatibility";
+import type { ProductCreateRequest, ProductUpdateRequest, ProductVariantCreateRequest, ProductVariantUpdateRequest } from "./product-compatibility";
 
 export type HttpMethod = "GET" | "POST" | "PATCH" | "DELETE";
 
@@ -68,9 +68,9 @@ export type ApiSuccessBody<
 export type ResponseDecoder<Value> = (value: unknown) => Value;
 
 type CompatibleBodyOption<Method, Path, Op> = Method extends "POST"
-  ? Path extends "/products" ? { body: ProductCreateRequest } : BodyOption<Op>
+  ? Path extends "/products" ? { body: ProductCreateRequest } : Path extends "/products/{productId}/variants" ? { body: ProductVariantCreateRequest } : BodyOption<Op>
   : Method extends "PATCH"
-    ? Path extends "/products/{productId}" ? { body: ProductUpdateRequest } : BodyOption<Op>
+    ? Path extends "/products/{productId}" ? { body: ProductUpdateRequest } : Path extends "/products/{productId}/variants/{variantId}" ? { body: ProductVariantUpdateRequest } : BodyOption<Op>
     : BodyOption<Op>;
 
 export type ApiRequestOptions<

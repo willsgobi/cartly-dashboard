@@ -11,24 +11,30 @@ import { ProductForm } from "./ProductForm";
 import { ProductDetails } from "./ProductDetails";
 import styles from "./products.module.scss";
 
-export function ProductDialog({ companyId, mode, productId, onClose, onSaved }: { companyId: string; mode: "create" | "edit" | "details"; productId?: string; onClose: () => void; onSaved: () => void }) {
+export function ProductDialog({ companyId, mode, productId, onClose, onSaved, onVariantsChanged }: { companyId: string; mode: "create" | "edit" | "details"; productId?: string; onClose: () => void; onSaved: () => void; onVariantsChanged: () => void }) {
   const [data, setData] = useState<{ product?: Product; categories: Category[] }>();
   const [error, setError] = useState<string>();
   const [revision, setRevision] = useState(0);
+  const [success, setSuccess] = useState<string>();
+  const [refreshing, setRefreshing] = useState(false);
   useEffect(() => {
     const pending = new AbortController();
     void Promise.all([productId ? fetchProduct(companyId, productId, pending.signal) : Promise.resolve(undefined), mode === "details" ? Promise.resolve([]) : fetchCategories(companyId, pending.signal)])
       .then(([product, categories]) => { if (!pending.signal.aborted) setData({ product, categories }); })
-      .catch((failure: unknown) => { if (!pending.signal.aborted) setError(productError(failure)); });
+      .catch((failure: unknown) => { if (!pending.signal.aborted) { setData(undefined); setError(productError(failure)); } })
+      .finally(() => { if (!pending.signal.aborted) setRefreshing(false); });
     return () => pending.abort();
   }, [companyId, mode, productId, revision]);
-  function retry() { setError(undefined); setRevision((value) => value + 1); }
+  function retry() { setRefreshing(true); setError(undefined); setRevision((value) => value + 1); }
+  function variantCommitted(message: string) { setSuccess(message); retry(); onVariantsChanged(); }
   // The form reports its pending mutation so all dismissal controls stay locked.
   const [busy, setBusy] = useState(false);
   return <Modal title={mode === "create" ? "Novo produto" : mode === "edit" ? "Editar produto" : "Detalhes do produto"} busy={busy} onClose={onClose}>
+    {success && <p role="status" className={`${styles.success} ${styles.dialogFeedback}`}>{success}</p>}
+    {refreshing && <p role="status">Atualizando variantes...</p>}
     {error ? <div className={styles.form}><p role="alert" className={styles.error}>{error}</p><Button className={styles.compact} variant="outline" onClick={retry}>Tentar novamente</Button></div> : !data ? <p role="status">Carregando produto...</p>
-      : mode === "details" && data.product ? <ProductDetails product={data.product} />
-      : data.product && !validProductState(data.product) ? <p role="alert">Este produto possui uma configuração de preços ou variações que precisa ser corrigida antes da edição. A gestão de variações ainda não está disponível.</p>
+      : mode === "details" && data.product ? <ProductDetails product={data.product} companyId={companyId} busy={busy || refreshing} onBusyChange={setBusy} onCommitted={variantCommitted} />
+      : data.product && !validProductState(data.product) ? <p role="alert">Este produto possui uma configuração de preços ou variações que precisa ser corrigida antes da edição. Acesse os detalhes para gerenciar suas variantes.</p>
       : <ProductForm companyId={companyId} product={data.product} categories={data.categories} onClose={onClose} onSaved={onSaved} onBusyChange={setBusy} />}
   </Modal>;
 }

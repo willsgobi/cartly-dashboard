@@ -3,7 +3,7 @@
 F03 now provides the server-only cookie/BFF session boundary described in [session-management.md](session-management.md). F02 transport behavior below remains unchanged; its historical references to a future session task are superseded by that implemented decision.
 
 ## Source of truth
-Read `docs/contracts/cartly-openapi.json` (OpenAPI 3.0, Cartly API v1.0); backend reference docs are in `docs/backend-reference/`. This snapshot contains **24 operations over 17 paths and 29 component schemas**. The old backend `api.md` is an incomplete prose summary, not an alternative endpoint source. The contract declares no `servers` URL: set environment-specific base URL explicitly.
+Read `docs/contracts/cartly-openapi.json` (OpenAPI 3.0, Cartly API v1.0); backend reference docs are in `docs/backend-reference/`. The corrected F12 snapshot contains **24 operations over 16 paths and 29 component schemas**. The old backend `api.md` is an incomplete prose summary, not an alternative endpoint source. The contract declares no `servers` URL: set environment-specific base URL explicitly.
 
 ## Rules
 - Centralized typed HTTP adapter; bearer JWT on operations marked `security: [{bearer: []}]`.
@@ -38,7 +38,7 @@ Read `docs/contracts/cartly-openapi.json` (OpenAPI 3.0, Cartly API v1.0); backen
 | `PATCH` | `/products/{productId}` | UpdateProductDto | 200:ProductResponseDto | JWT |
 | `DELETE` | `/products/{productId}` | DeleteProductDto | — | JWT |
 | `POST` | `/products/{productId}/variants` | CreateProductVariantDto | 201:ProductVariantResponseDto | JWT |
-| `PATCH` | `/products/{productId}/variants/{productId}/variants/{variantId}` | UpdateProductVariantDto | 200:ProductVariantResponseDto | JWT |
+| `PATCH` | `/products/{productId}/variants/{variantId}` | UpdateProductVariantDto | 200:ProductVariantResponseDto | JWT |
 | `DELETE` | `/products/{productId}/variants/{variantId}` | — | — | JWT |
 
 ## Specific contract notes
@@ -47,7 +47,7 @@ Read `docs/contracts/cartly-openapi.json` (OpenAPI 3.0, Cartly API v1.0); backen
 - `GET /products` requires `companyId` query and returns active products.
 - `POST /products` requires `companyId` **in the body**, with `categoryId`.
 - `POST /products/{productId}/variants` requires `companyId` query.
-- The OpenAPI route for variant PATCH is suspicious: `/products/{productId}/variants/{productId}/variants/{variantId}`. Do not normalize without backend confirmation.
+- F12's user-supplied corrected snapshot documents PATCH /products/{productId}/variants/{variantId} with required companyId query. The inspected controller agrees; generated types were regenerated. The old duplicated route is not used.
 - Category DELETE returns 204 without body; product DELETE returns 200 with message.
 - Swagger monetary schema types for some `price` request/response properties are `object`, but examples are numeric; confirm actual runtime representation and fix backend OpenAPI schema before relying on generated types.
 
@@ -63,9 +63,13 @@ Read `docs/contracts/cartly-openapi.json` (OpenAPI 3.0, Cartly API v1.0); backen
 
 Run `npm run api:generate` after an authorized contract update. Commit the generated file alongside the contract change. Run `npm run api:check` to detect drift without rewriting the file. Generation uses [openapi-typescript](https://openapi-ts.dev/cli) as a development dependency and does not fetch a remote API.
 
-The current price declarations remain `Record<string, never> | null` (optional where specified); they are **not** converted to numbers from examples. Variant response prices remain `number | null`. The malformed variant PATCH path is retained exactly. Two DELETE success schemas contain examples without property definitions, so their JSON bodies remain `unknown`; an example alone does not establish a response DTO. These issues still require backend clarification before affected services or pricing forms are implemented.
+The generated price declarations remain `Record<string, never> | null` (optional where specified); they are **not** converted to numbers from examples. Variant response prices remain `number | null`. F12 regenerated the corrected variant PATCH path. Two DELETE success schemas contain examples without property definitions, so their JSON bodies remain `unknown`; an example alone does not establish a response DTO. Monetary schema correction remains open; the explicit runtime compatibility below is based on inspected backend source.
+
+F12 uses the corrected PATCH path, required productId/variantId path parameters and companyId query, and the optional name/price fields from UpdateProductVariantDto. The existing explicit numeric compatibility also covers this PATCH price after inspecting UpdateProductVariantDto/UpdateProductVariantUseCase in local NestJS. This preserves the raw generated object-valued monetary schema, with validated numeric application models. The fixed BFF rechecks company/parent membership, rejects NORMAL and any shared-price variant price field, validates final invariants and forwards only a partial DTO. Documented errors are 400/401/403/404; unexpected statuses use generic existing mappings without claiming new backend behavior.
 
 F10 explicitly authorizes product numeric/null models. Inspected local NestJS DTOs and repository conversions establish that representation; lib/api/product-compatibility.ts now supplies a narrow price override for POST /products and PATCH /products/{productId} request options only. Generated response types remain untouched; F10 decodes unknown responses with numeric runtime schemas. This does not alter variant operations or infer a precision policy. See [modules/products.md](modules/products.md) for evidence, source/snapshot differences and live validation limits.
+
+F11 extends that explicit numeric compatibility to initial CreateProductDto.variants prices and POST /products/{productId}/variants, based on the inspected CreateProductVariantDto and repository Number conversion. Variant deletion uses companyId query and no request body, returning 200 with an underspecified message example. Fixed variant BFF handlers verify current company/product scope before forwarding; no variant PATCH or separate list operation is introduced. Price text normalization checks JSON numeric round trips without monetary arithmetic or a guessed precision scale.
 
 ### Environment configuration
 

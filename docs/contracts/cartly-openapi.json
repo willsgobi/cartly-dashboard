@@ -1118,7 +1118,7 @@
         ]
       }
     },
-    "/products/{productId}/variants/{productId}/variants/{variantId}": {
+    "/products/{productId}/variants/{variantId}": {
       "patch": {
         "operationId": "ProductVariantsController_updateVariant",
         "parameters": [
@@ -1194,9 +1194,7 @@
         "tags": [
           "Product Variants"
         ]
-      }
-    },
-    "/products/{productId}/variants/{variantId}": {
+      },
       "delete": {
         "operationId": "ProductVariantsController_remove",
         "parameters": [

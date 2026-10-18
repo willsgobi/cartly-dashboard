@@ -114,17 +114,17 @@ describe("API client", () => {
     expect(url.searchParams.get("companyId")).toBe("empresa & matriz/ç");
   });
 
-  it("retains every repeated placeholder in the ambiguous variant route", async () => {
+  it("uses the corrected variant PATCH route and required company query", async () => {
     const { client, fetchMock } = setup(Response.json({
       id: "variant-id", productId: "product-id", name: "Grande", price: null,
       createdAt: "2026-10-16T12:00:00Z", updatedAt: "2026-10-16T12:00:00Z",
     } satisfies components["schemas"]["ProductVariantResponseDto"]));
-    await client.request("PATCH", "/products/{productId}/variants/{productId}/variants/{variantId}", {
+    await client.request("PATCH", "/products/{productId}/variants/{variantId}", {
       pathParams: { productId: "product-id", variantId: "variant-id" },
       query: { companyId: "company-id" }, body: { name: "Grande", price: null },
     });
     expect(String(fetchMock.mock.calls[0][0])).toBe(
-      "https://api.example.test/v1/products/product-id/variants/product-id/variants/variant-id?companyId=company-id",
+      "https://api.example.test/v1/products/product-id/variants/variant-id?companyId=company-id",
     );
   });
 

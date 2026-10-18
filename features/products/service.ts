@@ -1,7 +1,7 @@
 import "server-only";
 import { authenticatedRequest } from "../../lib/auth/authenticated-api";
 import { ApiError } from "../../lib/api/errors";
-import { decodeProduct, decodeProducts, type ProductCreate, type ProductUpdate } from "./schemas";
+import { decodeProduct, decodeProducts, variantSchema, type ProductCreate, type ProductUpdate, type VariantCreate, type VariantUpdate } from "./schemas";
 
 function decode<T>(read: () => T): T { try { return read(); } catch { throw new ApiError("invalid-response"); } }
 export async function listProducts(token: string, companyId: string, signal?: AbortSignal) {
@@ -23,4 +23,26 @@ export async function updateProduct(token: string, companyId: string, productId:
 export async function deleteProduct(token: string, companyId: string, productId: string, signal?: AbortSignal): Promise<void> {
   // DELETE's success body has only an example in Swagger. Do not infer a required envelope.
   await authenticatedRequest(token, "DELETE", "/products/{productId}", { pathParams: { productId }, body: { companyId }, signal });
+}
+
+export async function createVariant(token: string, companyId: string, productId: string, body: VariantCreate, signal?: AbortSignal) {
+  const data = await authenticatedRequest(token, "POST", "/products/{productId}/variants", { pathParams: { productId }, query: { companyId }, body, signal });
+  return decode(() => {
+    const variant = variantSchema.parse(data);
+    if (variant.productId !== undefined && variant.productId !== productId) throw new Error("Unexpected variant parent");
+    return variant;
+  });
+}
+
+export async function deleteVariant(token: string, companyId: string, productId: string, variantId: string, signal?: AbortSignal): Promise<void> {
+  await authenticatedRequest(token, "DELETE", "/products/{productId}/variants/{variantId}", { pathParams: { productId, variantId }, query: { companyId }, signal });
+}
+
+export async function updateVariant(token: string, companyId: string, productId: string, variantId: string, body: VariantUpdate, signal?: AbortSignal) {
+  const data = await authenticatedRequest(token, "PATCH", "/products/{productId}/variants/{variantId}", { pathParams: { productId, variantId }, query: { companyId }, body, signal });
+  return decode(() => {
+    const variant = variantSchema.parse(data);
+    if (variant.id !== variantId || (variant.productId !== undefined && variant.productId !== productId)) throw new Error("Unexpected variant scope");
+    return variant;
+  });
 }

@@ -1,9 +1,32 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { fetchProduct, fetchProducts, removeProduct, saveProduct } from "./api";
+import { addVariant, fetchProduct, fetchProducts, patchVariant, removeProduct, removeVariant, saveProduct, variantError } from "./api";
+import { ApiError } from "../../lib/api/errors";
 import { product } from "./test-fixtures";
 beforeEach(() => { vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json(product)); });
 afterEach(() => vi.unstubAllGlobals());
 describe("product BFF browser adapter", () => {
+  it("PATCHes the encoded variant URL with only changed fields", async () => {
+    vi.mocked(fetch).mockResolvedValue(Response.json({ id: "v/id", productId: "p/id", name: "Novo", price: 45.5 }));
+    const signal = new AbortController().signal; await patchVariant("a&b", "p/id", "v/id", { price: 45.5 }, signal);
+    expect(fetch).toHaveBeenCalledWith("/api/products/p%2Fid/variants/v%2Fid?companyId=a%26b", expect.objectContaining({ method: "PATCH", body: '{"price":45.5}', signal, credentials: "same-origin", cache: "no-store" }));
+  });
+  it.each([400, 401, 403, 404, 500])("maps variant update HTTP %s without exposing error text", async (status) => {
+    const replace = vi.fn(); vi.stubGlobal("window", { location: { replace } }); vi.mocked(fetch).mockResolvedValue(new Response("private", { status })); await expect(patchVariant("a", "p", "v", { name: "Novo" }, new AbortController().signal)).rejects.toMatchObject({ status }); expect(replace).toHaveBeenCalledTimes(status === 401 ? 1 : 0);
+  });
+  it("encodes variant paths and company query without exposing tokens", async () => {
+    vi.mocked(fetch).mockResolvedValue(Response.json({ id: "v", productId: "p/id", name: "P", price: 30 }));
+    const signal = new AbortController().signal; await addVariant("a&b", "p/id", { name: "P", price: 30 }, signal);
+    expect(fetch).toHaveBeenCalledWith("/api/products/p%2Fid/variants?companyId=a%26b", expect.objectContaining({ method: "POST", body: '{"name":"P","price":30}', credentials: "same-origin", signal }));
+  });
+  it("deletes variants with no body and retains the fixed BFF success", async () => {
+    vi.mocked(fetch).mockResolvedValue(Response.json({ deleted: true })); await removeVariant("a&b", "p/id", "v/id", new AbortController().signal);
+    const [path, options] = vi.mocked(fetch).mock.calls[0]; expect(path).toBe("/api/products/p%2Fid/variants/v%2Fid?companyId=a%26b"); expect(options?.method).toBe("DELETE"); expect(options?.body).toBeUndefined(); expect(new Headers(options?.headers).has("Content-Type")).toBe(false);
+  });
+  it.each([401, 403, 409])("preserves variant HTTP %s and only redirects 401", async (status) => {
+    const replace = vi.fn(); vi.stubGlobal("window", { location: { replace } }); vi.mocked(fetch).mockResolvedValue(new Response("private", { status }));
+    await expect(addVariant("a", "p", { name: "P", price: null }, new AbortController().signal)).rejects.toMatchObject({ status }); expect(replace).toHaveBeenCalledTimes(status === 401 ? 1 : 0);
+    if (status === 409) expect(variantError(new ApiError("http", { status }))).toContain("Já existe uma variante");
+  });
   it("forwards numeric JSON without tokens and encodes scope/path", async () => {
     vi.mocked(fetch).mockResolvedValue(Response.json({ ...product, id: "p/id", companyId: "a&b" }));
     await saveProduct("a&b", { price: 12.5 }, "p/id");

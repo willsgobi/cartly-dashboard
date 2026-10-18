@@ -7,7 +7,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 /** Actual browser cookie/history checks complement the production HTTP assertions. */
-export async function checkAuthBrowser(origin, { setProtectedStatus, setCompanies, companyFixtures, createdCompanies, setCategoryStatus, setProductStatus, products, getProductCategory }) {
+export async function checkAuthBrowser(origin, { setProtectedStatus, setCompanies, companyFixtures, createdCompanies, setCategoryStatus, setProductStatus, setVariantStatus, variantUpdates, products, getProductCategory }) {
   const chrome = process.env.CHROME_PATH ?? "C:/Program Files/Google/Chrome/Application/chrome.exe";
   assert(existsSync(chrome), "Set CHROME_PATH to a local Chrome/Chromium executable");
   const reservation = createServer();
@@ -406,6 +406,83 @@ export async function checkAuthBrowser(origin, { setProtectedStatus, setCompanie
     assert(!(await evaluate("document.body.innerText.includes('Pizza')")));
     setProductStatus(401); await navigate("Page.reload"); await wait("location.pathname==='/login'"); assert.equal((await sessionCookies()).length, 0); setProductStatus(200);
     console.log("PASS browser products: NORMAL create/numeric BRL, local search, details/variants, partial edit, soft DELETE with company JSON, 403 preservation, 401 cleanup, company isolation and responsive screenshots " + profile);
+    // F11/F12: initial strategies and focused variant mutations through the actual BFF.
+    setCompanies([companyFixtures[0]]); await go("/login"); await signIn(); await click("Produtos");
+    await wait("location.pathname==='/dashboard/products' && !!document.querySelector('[data-modal-fallback]')");
+    const selectType = async (type) => evaluate(`(()=>{const field=document.querySelector('dialog[open] select[name=type]');field.value=${JSON.stringify(type)};field.dispatchEvent(new Event('change',{bubbles:true}))})()`);
+    for (const type of ["VARIANT", "VARIANT_WITH_PRICE"]) {
+      await click("Novo produto"); await fill("name", type === "VARIANT" ? "Camiseta nova" : "Pizza nova"); await fill("description", "Produto com variantes");
+      await evaluate("(()=>{const select=document.querySelector('dialog[open] select[name=categoryId]');select.value=select.options[1].value;select.dispatchEvent(new Event('change',{bubbles:true}))})()");
+      await selectType(type);
+      if (type === "VARIANT") await fill("price", "59,90");
+      await click("Adicionar variante"); await fill("variants.0.name", "P"); if (type === "VARIANT_WITH_PRICE") await fill("variants.0.price", "30,10");
+      await click("Adicionar variante"); await fill("variants.1.name", "M"); if (type === "VARIANT_WITH_PRICE") await fill("variants.1.price", "40,50");
+      await click("Criar produto");
+      await wait(`!document.querySelector('dialog[open]') && !!document.querySelector('[aria-label="Detalhes de ${type === "VARIANT" ? "Camiseta nova" : "Pizza nova"}"]:not(:disabled)')`);
+    }
+    const sharedProduct = products.find((item) => item.name === "Camiseta nova"); assert.equal(sharedProduct.variants.length, 2); assert(sharedProduct.variants.every((variant) => variant.price === null));
+    const individualProduct = products.find((item) => item.name === "Pizza nova"); assert.equal(individualProduct.price, null); assert.equal(individualProduct.variants[0].price, 30.1);
+    await evaluate("document.querySelector('[aria-label=\"Detalhes de Pizza nova\"]').click()"); await wait("document.querySelector('dialog[open]')?.innerText.includes('30,10')");
+    await click("Adicionar variante"); await fill("name", "G"); await fill("price", "50,25"); await click("Salvar variante");
+    await wait("/G.*50,25/.test(document.querySelector('dialog[open]')?.innerText ?? '') && !document.querySelector('form[aria-label=\"Adicionar variante\"]')");
+    assert.equal(individualProduct.variants.length, 3);
+    await wait("!document.querySelector('dialog[open] button[disabled]')");
+    await click("Adicionar variante"); await fill("name", "G"); await fill("price", "50,25"); await click("Salvar variante");
+    await wait("document.querySelector('dialog[open]')?.innerText.includes('Já existe uma variante')"); assert.equal(await evaluate("document.querySelector('dialog[open] [name=name]').value"), "G"); await click("Cancelar");
+    await send("Emulation.setDeviceMetricsOverride", { width: 390, height: 1000, deviceScaleFactor: 1, mobile: true });
+    assert(await evaluate("document.documentElement.scrollWidth<=innerWidth && document.querySelector('dialog[open]').scrollWidth<=document.querySelector('dialog[open]').clientWidth"));
+    const variantsShot = await send("Page.captureScreenshot", { format: "png" }); writeFileSync(join(profile, "variants-390.png"), Buffer.from(variantsShot.data, "base64"));
+    await send("Emulation.setDeviceMetricsOverride", { width: 1280, height: 1000, deviceScaleFactor: 1, mobile: false });
+    for (const name of ["G", "M", "P"]) {
+      await evaluate(`document.querySelector('[aria-label="Excluir variante ${name}"]').click()`);
+      if (name === "P") assert(await evaluate("document.querySelector('dialog[open]').innerText.includes('última variante')"));
+      if (name === "G") { setVariantStatus(403); await click("Excluir variante"); await wait("document.querySelector('dialog[open]')?.innerText.includes('Você não tem permissão')"); assert.equal((await sessionCookies()).length, 1); setVariantStatus(200); }
+      await click("Excluir variante");
+      await wait(`!document.querySelector('[aria-label="Excluir variante ${name}"]') && !document.querySelector('[aria-label="Confirmar exclusão da variante"]')`);
+      await wait("!document.querySelector('dialog[open] button[disabled]')");
+    }
+    assert.equal(individualProduct.variants.length, 0); await wait("document.querySelector('dialog[open]')?.innerText.includes('Este produto está sem variantes')");
+    await click("Adicionar variante"); await fill("name", "Restaurada"); await fill("price", "30,10"); await click("Salvar variante"); await wait("/Restaurada.*30,10/.test(document.querySelector('dialog[open]')?.innerText ?? '')");
+    await wait("!document.querySelector('dialog[open] button[disabled]')");
+    await click("Adicionar variante"); await fill("name", "Expirada"); await fill("price", "20,00"); setVariantStatus(401); await click("Salvar variante"); await wait("location.pathname==='/login'"); assert.equal((await sessionCookies()).length, 0); setVariantStatus(200);
+    console.log("PASS browser variants: both initial pricing strategies, preserved details, add/409/403/401, permanent bodyless DELETE, last-variant warning/empty recovery, native modal and mobile screenshot " + profile);
+    // F12: shared-price name-only PATCH, individual price updates, nested native modal behavior.
+    setCompanies([companyFixtures[0]]); await go("/login"); await signIn(); await click("Produtos");
+    await wait("!!document.querySelector('[aria-label=\"Detalhes de Camiseta nova\"]:not(:disabled)')");
+    await evaluate("document.querySelector('[aria-label=\"Detalhes de Camiseta nova\"]').click()");
+    await wait("!!document.querySelector('[aria-label=\"Editar variante P\"]:not(:disabled)')");
+    await evaluate("document.querySelector('[aria-label=\"Editar variante P\"]').click()");
+    await wait("document.querySelector('form[aria-label=\"Editar variante\"]')?.closest('dialog')?.matches(':modal')");
+    assert(!(await evaluate("!!document.querySelector('form[aria-label=\"Editar variante\"] [name=price]')")), "Shared variant must not expose a price field");
+    await click("Salvar alterações");
+    await wait("!document.querySelector('form[aria-label=\"Editar variante\"]')"); assert.equal(variantUpdates.length, 0, "Unchanged variant must not PATCH");
+    await evaluate("document.querySelector('[aria-label=\"Editar variante P\"]').click()");
+    await fill("name", "Pequena renomeada"); await click("Salvar alterações");
+    await wait("!document.querySelector('form[aria-label=\"Editar variante\"]') && !!document.querySelector('[aria-label=\"Editar variante Pequena renomeada\"]:not(:disabled)')");
+    assert.deepEqual(variantUpdates[0].body, { name: "Pequena renomeada" }); assert.equal(sharedProduct.price, 59.9);
+    await click("Fechar");
+    await evaluate("document.querySelector('[aria-label=\"Detalhes de Pizza nova\"]').click()");
+    await wait("!!document.querySelector('[aria-label=\"Editar variante Restaurada\"]:not(:disabled)')");
+    await evaluate("document.querySelector('[aria-label=\"Editar variante Restaurada\"]').click()");
+    await wait("!!document.querySelector('form[aria-label=\"Editar variante\"] [name=price]')");
+    await send("Input.dispatchKeyEvent", { type: "keyDown", key: "Escape", code: "Escape", windowsVirtualKeyCode: 27 });
+    await send("Input.dispatchKeyEvent", { type: "keyUp", key: "Escape", code: "Escape", windowsVirtualKeyCode: 27 });
+    await wait("!document.querySelector('form[aria-label=\"Editar variante\"]') && document.activeElement.getAttribute('aria-label')==='Editar variante Restaurada'");
+    assert(await evaluate("!!document.querySelector('dialog[open]')"), "Escape on edit must preserve details");
+    await evaluate("document.querySelector('[aria-label=\"Editar variante Restaurada\"]').click()");
+    await fill("name", "Especial"); await fill("price", "45,50");
+    await send("Emulation.setDeviceMetricsOverride", { width: 390, height: 1000, deviceScaleFactor: 1, mobile: true });
+    assert(await evaluate("(()=>{const d=document.querySelector('form[aria-label=\"Editar variante\"]').closest('dialog');return d.scrollWidth<=d.clientWidth && document.documentElement.scrollWidth<=innerWidth})()"));
+    const editShot = await send("Page.captureScreenshot", { format: "png" }); writeFileSync(join(profile, "variant-edit-390.png"), Buffer.from(editShot.data, "base64"));
+    setVariantStatus(403); await click("Salvar alterações");
+    await wait("document.querySelector('form[aria-label=\"Editar variante\"]')?.innerText.includes('Você não tem permissão')"); assert.equal((await sessionCookies()).length, 1); assert.equal(await evaluate("document.querySelector('form[aria-label=\"Editar variante\"] [name=name]').value"), "Especial");
+    setVariantStatus(200); await click("Salvar alterações");
+    await wait("!document.querySelector('form[aria-label=\"Editar variante\"]') && !!document.querySelector('[aria-label=\"Editar variante Especial\"]:not(:disabled)')");
+    assert.deepEqual(variantUpdates[1].body, { name: "Especial", price: 45.5 }); assert.equal(individualProduct.price, null);
+    await navigate("Page.reload"); await wait("!!document.querySelector('[aria-label=\"Detalhes de Pizza nova\"]:not(:disabled)')");
+    await evaluate("document.querySelector('[aria-label=\"Detalhes de Pizza nova\"]').click()"); await wait("/Especial.*45,50/.test(document.querySelector('dialog[open]')?.innerText ?? '')");
+    await evaluate("document.querySelector('[aria-label=\"Editar variante Especial\"]').click()"); await fill("name", "Sessão inválida"); setVariantStatus(401); await click("Salvar alterações"); await wait("location.pathname==='/login'"); assert.equal((await sessionCookies()).length, 0); setVariantStatus(200);
+    console.log("PASS browser variant updates: corrected PATCH/partial DTO, unchanged skip, shared-price preservation, individual price, 403/401, nested Escape/focus, reload persistence and mobile screenshot " + profile);
     assert(urls.every((url) => !url.includes("synthetic-password") && !url.includes("synthetic-wrong")), "Passwords must not enter URLs");
     assert.deepEqual(errors, [], "No browser JavaScript exceptions");
     console.log("PASS browser companies: zero/one/multiple companies, native selection/switch, refresh restoration, removal, document cache reset, onboarding boundary, logout/new-session isolation");

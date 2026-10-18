@@ -51,7 +51,7 @@ describe("products management", () => {
     const user = await ready(); await user.click(screen.getByRole("button", { name: "Detalhes de Suco" })); expect(await screen.findByText(/Pequeno/)).toBeDefined(); expect(screen.getByText("Sem descrição.")).toBeDefined(); expect(screen.getByText("Imagem indisponível.")).toBeDefined(); if (type === "VARIANT_WITH_PRICE") expect(screen.getByText(/7,50/)).toBeDefined(); expect(screen.queryByRole("button", { name: /variação/i })).toBeNull();
   });
   it("blocks editing inconsistent variants", async () => {
-    vi.mocked(fetchProduct).mockResolvedValue({ ...product, type: "VARIANT", variants: [] }); const user = await ready(); await user.click(screen.getByRole("button", { name: "Editar Suco" })); expect(await screen.findByRole("alert")).toHaveProperty("textContent", expect.stringContaining("gestão de variações")); expect(screen.queryByRole("button", { name: "Salvar alterações" })).toBeNull();
+    vi.mocked(fetchProduct).mockResolvedValue({ ...product, type: "VARIANT", variants: [] }); const user = await ready(); await user.click(screen.getByRole("button", { name: "Editar Suco" })); expect(await screen.findByRole("alert")).toHaveProperty("textContent", expect.stringContaining("gerenciar suas variantes")); expect(screen.queryByRole("button", { name: "Salvar alterações" })).toBeNull();
   });
   it("edits variant product metadata without sending prices, type or variant changes", async () => {
     vi.mocked(fetchProduct).mockResolvedValue({ ...product, type: "VARIANT_WITH_PRICE", price: null, variants: [{ id: "v", name: "P", price: 5 }] });

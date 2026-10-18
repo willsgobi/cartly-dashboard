@@ -14,10 +14,10 @@ describe("validated product models", () => {
     expect(createProductSchema.safeParse({ name: "Produto", categoryId: "cat", type, price: 12.5 }).success).toBe(false);
   });
   it.each(["12,50", "12.50", "1", "0,01"])("accepts positive decimal form price %s", (price) => {
-    expect(productFormSchema.safeParse({ name: "Produto", description: "", categoryId: "cat", type: "NORMAL", price }).success).toBe(true);
+    expect(productFormSchema.safeParse({ name: "Produto", description: "", categoryId: "cat", type: "NORMAL", price, variants: [] }).success).toBe(true);
   });
   it.each(["", "0", "-1", "1,2,3", "Infinity", "1.234,56"])("rejects ambiguous/nonpositive form price %s", (price) => {
-    expect(productFormSchema.safeParse({ name: "Produto", description: "", categoryId: "cat", type: "NORMAL", price }).success).toBe(false);
+    expect(productFormSchema.safeParse({ name: "Produto", description: "", categoryId: "cat", type: "NORMAL", price, variants: [] }).success).toBe(false);
   });
   it("decodes numeric/null prices, nullable optional data and local variant metadata differences", () => {
     expect(decodeProduct({ ...product, description: null, images: null, category: null }, "a").description).toBeNull();

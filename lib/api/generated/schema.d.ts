@@ -271,23 +271,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/products/{productId}/variants/{productId}/variants/{variantId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        /** Partially update a product variant */
-        patch: operations["ProductVariantsController_updateVariant"];
-        trace?: never;
-    };
     "/products/{productId}/variants/{variantId}": {
         parameters: {
             query?: never;
@@ -302,7 +285,8 @@ export interface paths {
         delete: operations["ProductVariantsController_remove"];
         options?: never;
         head?: never;
-        patch?: never;
+        /** Partially update a product variant */
+        patch: operations["ProductVariantsController_updateVariant"];
         trace?: never;
     };
 }
@@ -1555,6 +1539,55 @@ export interface operations {
             };
         };
     };
+    ProductVariantsController_remove: {
+        parameters: {
+            query: {
+                /** @description Company UUID */
+                companyId: string;
+            };
+            header?: never;
+            path: {
+                /** @description Product UUID */
+                productId: string;
+                /** @description Product variant UUID */
+                variantId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Product variant deleted successfully. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description JWT authentication is required. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description User cannot delete product variants. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Company, product or variant not found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     ProductVariantsController_updateVariant: {
         parameters: {
             query: {
@@ -1599,55 +1632,6 @@ export interface operations {
                 content?: never;
             };
             /** @description User cannot update product variants. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Company, product or variant not found. */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    ProductVariantsController_remove: {
-        parameters: {
-            query: {
-                /** @description Company UUID */
-                companyId: string;
-            };
-            header?: never;
-            path: {
-                /** @description Product UUID */
-                productId: string;
-                /** @description Product variant UUID */
-                variantId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Product variant deleted successfully. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description JWT authentication is required. */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description User cannot delete product variants. */
             403: {
                 headers: {
                     [name: string]: unknown;
