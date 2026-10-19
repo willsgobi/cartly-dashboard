@@ -28,6 +28,17 @@ export const activationSchema = z.object({
 
 export const resendSchema = z.object({ email: emailSchema });
 
+export const resetPasswordRequestSchema = activationSchema.extend({
+  password: registerRequestSchema.shape.password,
+});
+export const resetPasswordFormSchema = resetPasswordRequestSchema.extend({
+  confirmPassword: registerFormSchema.shape.confirmPassword,
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "As senhas devem ser iguais.", path: ["confirmPassword"],
+});
+export type RecoveryEmailValues = z.infer<typeof resendSchema>;
+export type ResetPasswordFormValues = z.infer<typeof resetPasswordFormSchema>;
+
 export type RegisterFormValues = z.infer<typeof registerFormSchema>;
 export type ActivationFormValues = z.infer<typeof activationSchema>;
 

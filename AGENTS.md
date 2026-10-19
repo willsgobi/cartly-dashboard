@@ -125,3 +125,38 @@ Do not automatically start the next task.
 - Do not refactor working code without justification.
 - Ask for clarification when essential information
   is missing and cannot be verified in the repository.
+
+## Git Commit Guidelines
+
+After completing each implementation task, suggest a Git commit
+message following the Conventional Commits specification.
+
+Format:
+
+<type>(<scope>): <short description>
+
+Allowed types:
+- feat: New functionality
+- fix: Bug fix
+- refactor: Code restructuring without behavior changes
+- style: Styling or visual changes
+- test: Adding or updating tests
+- docs: Documentation changes
+- chore: Maintenance and configuration
+
+Rules:
+- Write commit messages in English.
+- Use the imperative mood.
+- Keep the subject concise and descriptive.
+- Base the message on actual changes made.
+- Suggest only one commit message per completed task.
+- Do not create a commit automatically.
+- Do not execute git add, git commit, or git push.
+- Do not stage or modify Git history.
+- The user is responsible for reviewing and committing changes manually.
+
+Include the following section in every task completion report:
+
+### Suggested Git Commit
+
+`<type>(<scope>): <short description>`

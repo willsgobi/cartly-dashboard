@@ -30,6 +30,8 @@ let productStatus = 200;
 let variantStatus = 200;
 let variantSequence = 0;
 const variantUpdates = [];
+const recoveryRequests = [];
+let loginPassword = "synthetic-password";
 const backend = createServer(async (request, response) => {
   upstreamPaths.push(request.url);
   response.setHeader("Content-Type", "application/json");
@@ -37,10 +39,25 @@ const backend = createServer(async (request, response) => {
     let body = "";
     for await (const chunk of request) body += chunk;
     const input = JSON.parse(body);
-    if (input.email === safeUser.email && input.password === "synthetic-password") {
+    if (input.email === safeUser.email && input.password === loginPassword) {
       response.end(JSON.stringify({ accessToken: token, user: safeUser }));
     } else {
       response.writeHead(401).end(JSON.stringify({ message: "private diagnostic" }));
+    }
+  } else if (["/auth/forgot-password", "/auth/reset-password"].includes(request.url) && request.method === "POST") {
+    assert.equal(request.headers.authorization, undefined, "Recovery must not forward a JWT");
+    assert.equal(request.headers.cookie, undefined, "Recovery must not forward cookies");
+    let body = ""; for await (const chunk of request) body += chunk;
+    const input = JSON.parse(body);
+    recoveryRequests.push({ path: request.url, body: input });
+    if (request.url === "/auth/forgot-password") {
+      assert.deepEqual(Object.keys(input), ["email"]);
+      response.end(JSON.stringify({ message: "private upstream wording must never be displayed" }));
+    } else {
+      assert.deepEqual(Object.keys(input).sort(), ["email", "otp", "password"]);
+      if (input.otp !== "00001234") { response.writeHead(400).end(JSON.stringify({ message: "private OTP diagnostic" })); return; }
+      loginPassword = input.password;
+      response.end(JSON.stringify(safeUser));
     }
   } else if (request.url === "/companies" && request.method === "POST") {
     assert.equal(request.headers.authorization, `Bearer ${token}`);
@@ -189,7 +206,7 @@ try {
   const request = (path, init = {}) => fetch(origin + path, { redirect: "manual", ...init });
   const cookieHeader = `__Host-cartly_session=${token}`;
 
-  for (const path of ["/login", "/register", "/activate-account"]) {
+  for (const path of ["/login", "/register", "/activate-account", "/forgot-password", "/reset-password"]) {
     assert.equal((await request(path)).status, 200, "Authentication pages must remain public");
   }
 
@@ -281,11 +298,12 @@ try {
       setProductStatus: (status) => { productStatus = status; },
       setVariantStatus: (status) => { variantStatus = status; },
       variantUpdates,
+      recoveryRequests,
       products,
       getProductCategory: () => (categories.get("a") ?? [])[0],
     });
   }
-  assert(upstreamPaths.every((path) => path === "/auth/login" || path === "/companies" || /^\/companies\/[^/]+\/categories(?:\/[^/]+)?$/.test(path) || /^\/products(?:\/[^/?]+)?(?:\?companyId=[^&]+)?$/.test(path) || /^\/products\/[^/]+\/variants(?:\/[^/?]+)?\?companyId=[^&]+$/.test(path)));
+  assert(upstreamPaths.every((path) => ["/auth/login", "/auth/forgot-password", "/auth/reset-password", "/companies"].includes(path) || /^\/companies\/[^/]+\/categories(?:\/[^/]+)?$/.test(path) || /^\/products(?:\/[^/?]+)?(?:\?companyId=[^&]+)?$/.test(path) || /^\/products\/[^/]+\/variants(?:\/[^/?]+)?\?companyId=[^&]+$/.test(path)));
   console.log("PASS production auth: login, secure cookies, CSRF, GET 405, protected SSR, forged/expired JWT, 401 cleanup, 403 preservation, no-store, no token leakage, logout");
 } catch (error) {
   console.error(error);

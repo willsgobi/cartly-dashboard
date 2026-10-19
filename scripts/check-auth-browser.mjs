@@ -7,7 +7,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 /** Actual browser cookie/history checks complement the production HTTP assertions. */
-export async function checkAuthBrowser(origin, { setProtectedStatus, setCompanies, companyFixtures, createdCompanies, setCategoryStatus, setProductStatus, setVariantStatus, variantUpdates, products, getProductCategory }) {
+export async function checkAuthBrowser(origin, { setProtectedStatus, setCompanies, companyFixtures, createdCompanies, setCategoryStatus, setProductStatus, setVariantStatus, variantUpdates, recoveryRequests, products, getProductCategory }) {
   const chrome = process.env.CHROME_PATH ?? "C:/Program Files/Google/Chrome/Application/chrome.exe";
   assert(existsSync(chrome), "Set CHROME_PATH to a local Chrome/Chromium executable");
   const reservation = createServer();
@@ -483,6 +483,49 @@ export async function checkAuthBrowser(origin, { setProtectedStatus, setCompanie
     await evaluate("document.querySelector('[aria-label=\"Detalhes de Pizza nova\"]').click()"); await wait("/Especial.*45,50/.test(document.querySelector('dialog[open]')?.innerText ?? '')");
     await evaluate("document.querySelector('[aria-label=\"Editar variante Especial\"]').click()"); await fill("name", "Sessão inválida"); setVariantStatus(401); await click("Salvar alterações"); await wait("location.pathname==='/login'"); assert.equal((await sessionCookies()).length, 0); setVariantStatus(200);
     console.log("PASS browser variant updates: corrected PATCH/partial DTO, unchanged skip, shared-price preservation, individual price, 403/401, nested Escape/focus, reload persistence and mobile screenshot " + profile);
+    // F13: public recovery through real Server Actions; only the upstream API is mocked.
+    await click("Esqueci minha senha?");
+    await wait("location.pathname==='/forgot-password' && !!document.querySelector('[name=email]')");
+    await click("Enviar código");
+    await wait("document.body.innerText.includes('Informe seu e-mail.')");
+    await fill("email", "test@example.com"); await click("Enviar código");
+    await wait("document.body.innerText.includes('Se o e-mail estiver cadastrado, você receberá um código')");
+    assert(!(await evaluate("document.body.innerText")).includes("private upstream"));
+    assert.equal((await sessionCookies()).length, 0);
+    await click("Continuar para redefinir senha");
+    await wait("location.pathname==='/reset-password' && !!document.querySelector('[name=otp]')");
+    assert.equal(await evaluate("document.querySelector('[name=email]').value"), "test@example.com", "Email persists only within the recovery layout");
+    await fill("otp", "11111111"); await fill("password", "synthetic-new-password"); await fill("confirmPassword", "synthetic-new-password");
+    await click("Redefinir senha");
+    await wait("document.body.innerText.includes('Código inválido, expirado ou indisponível')");
+    assert.equal(await evaluate("document.querySelector('[name=password]').value"), "synthetic-new-password");
+    await fill("otp", "00001234");
+    for (const width of [320, 390, 768, 1280]) {
+      await send("Emulation.setDeviceMetricsOverride", { width, height: 1000, deviceScaleFactor: 1, mobile: width < 768 });
+      assert(await evaluate("document.documentElement.scrollWidth<=innerWidth"), "Recovery page must fit the viewport");
+      if (width === 390) {
+        const shot = await send("Page.captureScreenshot", { format: "png" });
+        writeFileSync(join(profile, "password-reset-390.png"), Buffer.from(shot.data, "base64"));
+      }
+    }
+    await click("Redefinir senha");
+    await wait("location.pathname==='/login' && document.body.innerText.includes('Senha redefinida com sucesso')");
+    assert.equal((await sessionCookies()).length, 0, "Reset must not authenticate");
+    assert.deepEqual(recoveryRequests.at(-1).body, { email: "test@example.com", otp: "00001234", password: "synthetic-new-password" });
+    await go("/reset-password"); await wait("!!document.querySelector('[name=otp]')");
+    assert.equal(await evaluate("document.querySelector('[name=email]').value"), "", "Full navigation discards recovery data");
+    await click("Solicitar outro código"); await fill("email", "unknown@example.com"); await click("Enviar código");
+    await wait("document.body.innerText.includes('Se o e-mail estiver cadastrado, você receberá um código')");
+    await click("Voltar ao login"); await fill("email", "test@example.com"); await fill("password", "synthetic-new-password"); await click("Entrar");
+    await wait("location.pathname==='/dashboard'");
+    const existingSession = (await sessionCookies())[0]?.value;
+    assert(existingSession, "New password must work with the mock login endpoint");
+    await go("/reset-password"); await fill("email", "test@example.com"); await fill("otp", "00001234");
+    await fill("password", "synthetic-new-password"); await fill("confirmPassword", "synthetic-new-password"); await click("Redefinir senha");
+    await wait("location.pathname==='/login' && document.body.innerText.includes('Senha redefinida com sucesso')");
+    assert.equal((await sessionCookies())[0]?.value, existingSession, "Reset must not alter an existing session");
+    assert(urls.every((url) => !url.includes("00001234") && !url.includes("11111111") && !url.includes("synthetic-new-password") && !url.includes("test%40example.com") && !url.includes("unknown%40example.com")), "Recovery data must not enter URLs");
+    console.log("PASS browser password recovery: public Server Actions, generic confirmation, memory-only email, exact DTO/leading zeros, invalid OTP, responsive form, reset/login and unchanged existing session; screenshot " + profile);
     assert(urls.every((url) => !url.includes("synthetic-password") && !url.includes("synthetic-wrong")), "Passwords must not enter URLs");
     assert.deepEqual(errors, [], "No browser JavaScript exceptions");
     console.log("PASS browser companies: zero/one/multiple companies, native selection/switch, refresh restoration, removal, document cache reset, onboarding boundary, logout/new-session isolation");

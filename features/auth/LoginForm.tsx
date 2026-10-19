@@ -49,6 +49,7 @@ export function LoginForm({ returnTo }: { returnTo: string }) {
       {feedback && <p role={feedback.kind === "error" ? "alert" : "status"} className={styles[feedback.kind]}>{feedback.message}</p>}
       <Button type="submit" loading={isSubmitting} disabled={busy}>Entrar</Button>
       <nav aria-label="Navegação de acesso" className={styles.navigation}>
+        <Link href="/forgot-password">Esqueci minha senha?</Link>
         <Link href="/register">Criar conta</Link>
         <Link href="/activate-account">Ativar minha conta</Link>
         <Link href="/">Voltar ao início</Link>
