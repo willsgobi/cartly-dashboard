@@ -28,7 +28,7 @@ function failure(error: unknown, operation: "register" | "activate" | "resend" |
 
 export async function requestPasswordReset(input: unknown): Promise<AuthActionResult> {
   try {
-    //assertSameOrigin({ headers: await headers() });
+    assertSameOrigin({ headers: await headers() });
     const parsed = resendSchema.safeParse(input);
     if (!parsed.success) return { ok: false, status: 400, message: "Informe um e-mail válido para receber o código." };
     const api = createApiClient({ baseUrl: getApiBaseUrl() });

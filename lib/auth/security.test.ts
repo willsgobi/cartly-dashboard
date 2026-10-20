@@ -26,6 +26,21 @@ describe("BFF origin and redirect policy", () => {
       method: "POST", headers: { origin: appOrigin, "sec-fetch-site": "same-origin" },
     }))).not.toThrow();
   });
+  it.each([
+    ["http://localhost:3001", "same-origin", true],
+    ["http://localhost:3001", null, true],
+    ["http://127.0.0.1:3001", "same-origin", false],
+    ["http://localhost:3000", "same-origin", false],
+    ["https://localhost:3001", "same-origin", false],
+    ["http://localhost:3001", "same-site", false],
+  ])("checks local dashboard origin %s with metadata %s", (origin, site, allowed) => {
+    vi.stubEnv("APP_ORIGIN", "http://localhost:3001");
+    const headers = new Headers({ origin });
+    if (site !== null) headers.set("sec-fetch-site", site);
+    const check = () => assertSameOrigin({ headers });
+    if (allowed) expect(check).not.toThrow();
+    else expect(check).toThrow(expect.objectContaining({ status: 403 }));
+  });
   it.each([{}, { origin: "null" }, { origin: "https://evil.test" }, { origin: appOrigin + ".evil.test" }, { origin: appOrigin, "sec-fetch-site": "cross-site" }])("rejects untrusted browser requests: %j", (headers) => {
     vi.stubEnv("APP_ORIGIN", appOrigin);
     const requestHeaders = new Headers();
