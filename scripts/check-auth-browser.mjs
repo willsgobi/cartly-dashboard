@@ -108,11 +108,13 @@ export async function checkAuthBrowser(origin, { setProtectedStatus, setCompanie
     };
     const go = (path) => navigate("Page.navigate", { url: origin + path });
     const sessionCookies = async () => (await send("Storage.getCookies")).cookies.filter((cookie) => cookie.name === "__Host-cartly_session");
-    const signIn = async () => {
+    const signIn = async (expectSelection = false) => {
       await fill("email", "test@example.com");
       await fill("password", "synthetic-password");
       await click("Entrar");
-      await wait("location.pathname==='/dashboard' && document.body.innerText.includes('Organize a gestão do seu negócio por aqui.')");
+      await wait(expectSelection
+        ? "location.pathname==='/select-company' && !!document.querySelector('[aria-label=\"Empresas disponíveis\"]')"
+        : "location.pathname==='/dashboard' && document.body.innerText.includes('Organize a gestão do seu negócio por aqui.')");
     };
 
     await send("Page.enable");
@@ -174,22 +176,41 @@ export async function checkAuthBrowser(origin, { setProtectedStatus, setCompanie
     // F06: actual native POST switching, restored preferences and complete document isolation.
     setCompanies(companyFixtures);
     await navigate("Page.reload");
-    await wait("!!document.querySelector('select[name=companyId]')");
-    assert.equal(await evaluate("document.querySelector('select').value"), "");
+    await wait("location.pathname==='/select-company' && !!document.querySelector('[aria-label=\"Empresas disponíveis\"]')");
+    assert(!(await evaluate("!!document.querySelector('header select')")), "Dashboard shell must be withheld until selection");
+    for (const width of [320, 390, 768, 1280]) {
+      await send("Emulation.setDeviceMetricsOverride", { width, height: 1000, deviceScaleFactor: 1, mobile: width < 768 });
+      assert(await evaluate("document.documentElement.scrollWidth<=innerWidth"), "Selection cards must fit viewport");
+      if (width === 390 || width === 1280) {
+        const shot = await send("Page.captureScreenshot", { format: "png" });
+        writeFileSync(join(profile, `company-selection-${width}.png`), Buffer.from(shot.data, "base64"));
+      }
+    }
     const select = async (id) => {
       await wait("!!document.querySelector('select[name=companyId]') && Object.keys(document.querySelector('select[name=companyId]')).some(k=>k.startsWith('__reactProps$'))");
       await evaluate("new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))");
       await evaluate(`(()=>{const e=document.querySelector('select[name=companyId]');e.value=${JSON.stringify(id)};e.dispatchEvent(new Event('change',{bubbles:true}))})()`);
     };
-    await select("b");
+    await wait("Object.keys(document.querySelector('[aria-label=\"Acessar empresa Empresa b\"]')).some(key=>key.startsWith('__reactProps$'))");
+    await evaluate("document.querySelector('[aria-label=\"Acessar empresa Empresa b\"]').focus()");
+    await send("Input.dispatchKeyEvent", { type: "keyDown", key: "Enter", code: "Enter", text: "\r", windowsVirtualKeyCode: 13 });
+    await send("Input.dispatchKeyEvent", { type: "keyUp", key: "Enter", code: "Enter", windowsVirtualKeyCode: 13 });
     await wait("document.querySelector('[role=status]')?.textContent==='Empresa b'");
     assert((await send("Storage.getCookies")).cookies.some((cookie) => cookie.name === "__Host-cartly_company" && cookie.httpOnly && cookie.secure));
     await navigate("Page.reload");
     assert.equal(await evaluate("document.querySelector('select').value"), "b", "Verified preference must restore after refresh");
+    await go("/select-company");
+    await wait("location.pathname==='/dashboard' && document.querySelector('select')?.value==='b'");
     await evaluate("window.companySpecificCachedData='old-company-b'");
     await select("a");
     await wait("document.querySelector('[role=status]')?.textContent==='Empresa a'");
     assert(await evaluate("window.companySpecificCachedData===undefined"), "Full navigation must discard the previous company cache");
+    setCompanies([companyFixtures[1], { ...companyFixtures[0], id: "replacement", name: "Empresa substituta" }]);
+    await go("/dashboard/products");
+    await wait("location.pathname==='/select-company' && !!document.querySelector('[aria-label=\"Acessar empresa Empresa b\"]')");
+    assert(!(await evaluate("document.body.innerText.includes('Catálogo de produtos')")), "Removed preference cannot load company data");
+    await evaluate("document.querySelector('[aria-label=\"Acessar empresa Empresa b\"]').click()");
+    await wait("location.pathname==='/dashboard' && document.querySelector('select')?.value==='b'");
     setCompanies([companyFixtures[1]]);
     await navigate("Page.reload");
     await wait("document.querySelector('[role=status]')?.textContent==='Empresa b'");
@@ -243,8 +264,10 @@ export async function checkAuthBrowser(origin, { setProtectedStatus, setCompanie
     await wait("location.pathname==='/login' && !!document.querySelector('[name=password]')");
     assert(!(await send("Storage.getCookies")).cookies.some((cookie) => cookie.name === "__Host-cartly_company"), "Logout clears the company preference");
     setCompanies(companyFixtures);
-    await signIn();
-    assert.equal(await evaluate("document.querySelector('select').value"), "", "A new session must not inherit a company choice");
+    await signIn(true);
+    assert(!(await evaluate("!!document.querySelector('header select')")), "A new session must not inherit a company choice");
+    await evaluate("document.querySelector('[aria-label=\"Acessar empresa Empresa a\"]').click()");
+    await wait("location.pathname==='/dashboard' && document.querySelector('select')?.value==='a'");
     // F08: native modal focus, inert background, navigation and account disclosure.
     await send("Emulation.setDeviceMetricsOverride", { width: 390, height: 1000, deviceScaleFactor: 1, mobile: true });
     await wait("document.querySelector('[aria-label=\"Abrir menu de navegação\"]')?.getClientRects().length>0");
@@ -301,13 +324,13 @@ export async function checkAuthBrowser(origin, { setProtectedStatus, setCompanie
     await wait("location.pathname==='/dashboard' && document.querySelector('h1')?.textContent==='Dashboard'");
     await click("Categorias");
     await wait("location.pathname==='/dashboard/categories' && document.querySelector('h1')?.textContent==='Categorias'");
-    await wait("document.body.innerText.includes('Selecione uma empresa no cabeçalho')");
+    await wait("document.body.innerText.includes('Nenhuma categoria cadastrada')");
     const chooseCompany = async (id) => {
       await wait("!!document.querySelector('select') && Object.keys(document.querySelector('select')).some(k=>k.startsWith('__reactProps$'))");
       await evaluate(`(()=>{const select=document.querySelector('select');select.value=${JSON.stringify(id)};select.dispatchEvent(new Event('change',{bubbles:true}))})()`);
       await wait(`location.pathname==='/dashboard' && document.querySelector('select')?.value===${JSON.stringify(id)}`);
     };
-    await chooseCompany("a"); await go("/dashboard/categories");
+    await go("/dashboard/categories");
     await wait("document.body.innerText.includes('Nenhuma categoria cadastrada')");
     assert(await evaluate("!!document.querySelector('aside a[href=\"/dashboard/categories\"][aria-current=page]')"));
     await click("Nova categoria");
@@ -401,8 +424,10 @@ export async function checkAuthBrowser(origin, { setProtectedStatus, setCompanie
     await wait("!document.querySelector('dialog[open]') && !document.querySelector('[aria-label=\"Editar Produto atualizado\"]')");
     assert(products[0].deletedAt, "Soft delete must retain the original record");
     setCompanies(companyFixtures); await go("/dashboard/products");
-    await wait("document.body.innerText.includes('Selecione uma empresa no cabeçalho')");
-    await chooseCompany("b"); await go("/dashboard/products"); await wait("document.body.innerText.includes('Nenhum produto cadastrado')");
+    await wait("location.pathname==='/select-company' && !!document.querySelector('[aria-label=\"Acessar empresa Empresa b\"]')");
+    await evaluate("document.querySelector('[aria-label=\"Acessar empresa Empresa b\"]').click()");
+    await wait("location.pathname==='/dashboard' && document.querySelector('select')?.value==='b'");
+    await go("/dashboard/products"); await wait("document.body.innerText.includes('Nenhum produto cadastrado')");
     assert(!(await evaluate("document.body.innerText.includes('Pizza')")));
     setProductStatus(401); await navigate("Page.reload"); await wait("location.pathname==='/login'"); assert.equal((await sessionCookies()).length, 0); setProductStatus(200);
     console.log("PASS browser products: NORMAL create/numeric BRL, local search, details/variants, partial edit, soft DELETE with company JSON, 403 preservation, 401 cleanup, company isolation and responsive screenshots " + profile);

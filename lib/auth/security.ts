@@ -9,14 +9,14 @@ export function getAppOrigin(): string {
   return url.origin;
 }
 
-/** Return destinations are restricted to dashboard paths, never auth or API routes. */
+/** Return destinations are restricted to dashboard/company selection, never auth or API routes. */
 export function safeReturnTo(value: unknown): string {
   if (typeof value !== "string" || /[\\\u0000-\u0020]/.test(value) || !value.startsWith("/")) {
     return "/dashboard";
   }
   try {
     const url = new URL(value, "https://cartly.invalid");
-    if (url.origin !== "https://cartly.invalid" || !/^\/dashboard(?:\/[a-zA-Z0-9_-]+)*\/?$/.test(url.pathname)) {
+    if (url.origin !== "https://cartly.invalid" || !/^(?:\/dashboard(?:\/[a-zA-Z0-9_-]+)*\/?|\/select-company)$/.test(url.pathname)) {
       return "/dashboard";
     }
     return url.pathname + url.search;

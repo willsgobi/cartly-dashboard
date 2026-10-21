@@ -36,11 +36,8 @@ describe("company workspace navigation boundary", () => {
     expect(screen.getByRole("heading", { name: "Empresa a" })).toBeDefined();
     expect(screen.getByRole("link", { name: "Criar nova empresa" }).getAttribute("href")).toBe("/dashboard/onboarding");
   });
-  it("shows a selector when there are multiple companies and a safe selection error", async () => {
-    render(await CompanyWorkspace({ selectionError: true }));
-    expect(screen.getByText("Escolha sua empresa para começar")).toBeDefined();
-    expect(screen.getByRole("link", { name: "Criar nova empresa" }).getAttribute("href")).toBe("/dashboard/onboarding");
-    expect(screen.getByRole("alert").textContent).toContain("Não foi possível selecionar");
+  it("requires a dedicated selection before rendering a multi-company dashboard", async () => {
+    await expect(CompanyWorkspace({})).rejects.toThrow("REDIRECT:/select-company");
   });
   it.each(["denied", "unavailable"] as const)("withholds company data on %s", async (kind) => {
     vi.mocked(requireDashboardAccess).mockResolvedValue({ kind, error: new ApiError("network") });

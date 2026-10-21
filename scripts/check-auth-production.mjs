@@ -247,11 +247,33 @@ try {
   assert.match(response.headers.get("cache-control"), /no-store/);
 
   accessibleCompanies = [];
+  response = await request("/select-company");
+  assert.equal(response.status, 303, "Company selection must require authentication");
+  assert.equal(new URL(response.headers.get("location"), origin).searchParams.get("returnTo"), "/select-company");
+  response = await request("/select-company", { headers: { Cookie: cookieHeader } });
+  assert((await response.text()).includes("/dashboard/onboarding"), "Empty selection screen must reuse onboarding");
   response = await request("/dashboard", { headers: { Cookie: cookieHeader } });
   assert((await response.text()).includes("/dashboard/onboarding"), "No companies must lead to onboarding boundary");
   response = await request("/dashboard/onboarding", { headers: { Cookie: cookieHeader } });
   assert((await response.text()).includes("Cadastre sua empresa"));
   assert.equal((await request("/dashboard/onboarding")).status, 303);
+  accessibleCompanies = [companyFixtures[0]];
+  response = await request("/select-company", { headers: { Cookie: cookieHeader } });
+  assert((await response.text()).includes("/dashboard"), "Single company must automatically continue to dashboard");
+  accessibleCompanies = companyFixtures;
+  const beforeSelection = upstreamPaths.length;
+  response = await request("/dashboard/products", { headers: { Cookie: cookieHeader } });
+  const unselectedHtml = await response.text();
+  assert(unselectedHtml.includes("/select-company"), "Multiple companies require selection before protected module rendering");
+  assert(!unselectedHtml.includes("Visão geral do dashboard"));
+  assert(!upstreamPaths.slice(beforeSelection).some((path) => path.startsWith("/products") || path.includes("/categories")), "No company-specific data may load before selection");
+  const selectionReads = upstreamPaths.filter((path) => path === "/companies").length;
+  response = await request("/select-company", { headers: { Cookie: cookieHeader } });
+  const selectionHtml = await response.text();
+  assert(selectionHtml.includes("Selecione sua empresa") && selectionHtml.includes("Empresa b"));
+  assert(!selectionHtml.includes(token), "Selection page must not expose the JWT");
+  assert.match(response.headers.get("cache-control"), /no-store/);
+  assert.equal(upstreamPaths.filter((path) => path === "/companies").length - selectionReads, 1);
   accessibleCompanies = [companyFixtures[0]];
 
   const forgedCookie = `__Host-cartly_session=${jwt(Math.floor(Date.now() / 1000) + 300, "forged")}`;

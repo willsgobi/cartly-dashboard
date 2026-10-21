@@ -7,7 +7,7 @@ vi.mock("server-only", () => ({}));
 afterEach(() => vi.unstubAllEnvs());
 
 describe("BFF origin and redirect policy", () => {
-  it.each(["/dashboard", "/dashboard/orders?filter=active", "/dashboard/"])("preserves a safe destination: %s", (value) => {
+  it.each(["/dashboard", "/dashboard/orders?filter=active", "/dashboard/", "/select-company"])("preserves a safe destination: %s", (value) => {
     expect(safeReturnTo(value)).toBe(value);
   });
   it.each([undefined, null, "", "https://evil.test", "//evil.test", "//[", "/\\evil.test", "/api/auth/logout", "/login", "/dashboard/../login", "/dashboard/%2f%2fevil.test", "/dashboard\n", "/dashboard#fragment"])("prevents unsafe or looping returns: %j", (value) => {

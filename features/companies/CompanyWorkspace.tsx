@@ -9,6 +9,7 @@ export async function CompanyWorkspace({ onboarding = false, selectionError = fa
   const access = await getDashboardContext();
   if (access.kind === "authenticated") {
     if (!access.companies.length && !onboarding) redirect("/dashboard/onboarding");
+    if (!access.activeCompany && !onboarding) redirect("/select-company");
   }
   if (access.kind === "authenticated") {
     if (onboarding) return <section className={`${dashboardStyles.card} ${dashboardStyles.onboarding}`}>

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
-import { proxy } from "../../proxy";
+import { config, proxy } from "../../proxy";
 import { sessionCookieName } from "./session";
 import { appOrigin, testJwt } from "./__tests__/fixtures";
 
@@ -17,6 +17,14 @@ function request(path: string, token?: string) {
 }
 
 describe("Next.js Proxy", () => {
+  it("protects the dedicated selection route and keeps its safe login return", async () => {
+    expect(config.matcher).toContain("/select-company");
+    const response = await proxy(request("/select-company"));
+    const location = new URL(response.headers.get("location") ?? "");
+    expect(location.pathname).toBe("/login");
+    expect(location.searchParams.get("returnTo")).toBe("/select-company");
+    expect(fetch).not.toHaveBeenCalled();
+  });
   it("redirects missing sessions and preserves a safe internal return URL", async () => {
     const response = await proxy(request("/dashboard/orders?filter=active"));
     expect(response.status).toBe(303);

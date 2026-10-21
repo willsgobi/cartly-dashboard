@@ -10,7 +10,7 @@ import { clearCompanySelection, setCompanySelection } from "../../lib/companies/
 import { companySelectionSchema } from "./schemas";
 
 function dashboardRedirect(error?: "invalid" | "denied" | "unavailable") {
-  return noStore(NextResponse.redirect(new URL(error ? `/dashboard?companyError=${error}` : "/dashboard", getAppOrigin()), 303));
+  return noStore(NextResponse.redirect(new URL(error ? `/select-company?companyError=${error}` : "/dashboard", getAppOrigin()), 303));
 }
 
 export async function handleCompanySelection(request: NextRequest): Promise<NextResponse> {

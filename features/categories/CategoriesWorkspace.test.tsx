@@ -18,6 +18,11 @@ describe("categories protected server boundary", () => {
     vi.mocked(getDashboardContext).mockResolvedValue({ kind: "authenticated", companies: [], activeCompany: null, user: null });
     await expect(CategoriesWorkspace()).rejects.toThrow("REDIRECT:/dashboard/onboarding");
   });
+  it("withholds category management until a valid company is selected", async () => {
+    vi.mocked(getDashboardContext).mockResolvedValue({ kind: "authenticated", companies: [company, { ...company, id: "b" }], activeCompany: null, user: null });
+    await expect(CategoriesWorkspace()).rejects.toThrow("REDIRECT:/select-company");
+    expect(screen.queryByText("Gestão de categorias")).toBeNull();
+  });
   it.each(["denied", "unavailable"] as const)("withholds category controls on %s", async (kind) => {
     vi.mocked(getDashboardContext).mockResolvedValue({ kind, error: new ApiError("http", { status: 403 }) });
     render(await CategoriesWorkspace()); expect(screen.getByRole("alert")).toBeDefined(); expect(screen.queryByText("Gestão de categorias")).toBeNull(); expect(screen.getByRole("button", { name: "Sair" })).toBeDefined();

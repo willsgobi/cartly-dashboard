@@ -8,7 +8,7 @@ import styles from "./dashboard.module.scss";
 export async function DashboardLayout({ children }: { children: ReactNode }) {
   const context = await getDashboardContext();
   // Page boundaries also check access. Denied/unavailable pages keep their existing safe state.
-  if (context.kind !== "authenticated") return children;
+  if (context.kind !== "authenticated" || (!context.activeCompany && context.companies.length > 0)) return children;
   return <ActiveCompanyProvider companies={context.companies} activeCompany={context.activeCompany}>
     <div className={styles.shell}>
       <a href="#dashboard-content" className={styles.skipLink}>Pular para o conteúdo</a>

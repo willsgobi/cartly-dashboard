@@ -31,11 +31,11 @@ For authenticated JSON fetch consumers, handle 401 by navigating to the returned
 
 ## Protected rendering and invalidation
 
-Next.js 16 proxy.ts matches /dashboard/:path* and /login. Missing cookies redirect to login; locally invalid/expired cookies are removed on the redirect. The normal dashboard check is optimistic; protected data/rendering must still check backend acceptance. /dashboard includes F06 company selection and /dashboard/onboarding now contains the F07 creation form. Future protected pages and data operations must use the server boundary themselves: a shared layout or Proxy alone is insufficient.
+Next.js 16 proxy.ts matches /dashboard/:path*, /select-company and /login. Missing cookies redirect to login; locally invalid/expired cookies are removed on the redirect. The normal dashboard check is optimistic; protected data/rendering must still check backend acceptance. /dashboard includes F06 company selection and /dashboard/onboarding now contains the F07 creation form. Future protected pages and data operations must use the server boundary themselves: a shared layout or Proxy alone is insufficient.
 
 Server Components cannot mutate cookies. Their backend 401 redirects to /login?reason=expired with a safe return path; Proxy on that destination clears an invalid cookie. A still-live token is rechecked against the backend before removal so crafted URLs/stale redirects cannot log out a valid/new session. This bounded cleanup verification never retries login, renews tokens or replays mutations. 403/network/server failures during cleanup do not remove a valid-looking cookie. The login shell does not redirect back, preventing loops, and displays the pt-BR expiration message. If the browser already removed an expired cookie, the ordinary missing-session login path is used.
 
-safeReturnTo allows only dashboard paths/query strings, rejecting external/protocol-relative URLs, backslashes, control characters and auth/API destinations; fallback is /dashboard. JWTs never appear in redirect URLs.
+safeReturnTo allows only dashboard paths/query strings and the exact /select-company route, rejecting external/protocol-relative URLs, backslashes, control characters and auth/API destinations; fallback is /dashboard. JWTs never appear in redirect URLs.
 
 Cache Components remain enabled. Dynamic session reads use Suspense with a non-sensitive loading fallback. No protected data uses persistent use cache. Upstream authenticated requests, BFF responses, protected HTML and login/redirect responses are private/no-store. Intermediaries must honor those response headers.
 
