@@ -77,8 +77,6 @@
 
   &:hover:not(:disabled) {
     color: var(--color-primary-dark);
-    text-decoration: underline;
-    text-underline-offset: 3px;
   }
 }
 
