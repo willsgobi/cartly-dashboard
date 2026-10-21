@@ -32,7 +32,7 @@ export function CategoryForm({ companyId, category, onClose, onSaved }: { compan
     <form className={styles.form} onSubmit={(event) => { void handleSubmit(submit)(event); }} noValidate aria-busy={busy}>
       <Input label="Nome da categoria" required {...register("name")} error={errors.name?.message} disabled={busy} />
       {error && <p role="alert" className={styles.error}>{error}</p>}
-      <div className={styles.actions}><Button variant="outline" disabled={busy} onClick={onClose}>Cancelar</Button><Button type="submit" loading={busy}>{category ? "Salvar alterações" : "Criar categoria"}</Button></div>
+      <div className={styles.actions}><Button variant="text" disabled={busy} onClick={onClose}>Cancelar</Button><Button type="submit" loading={busy}>{category ? "Salvar alterações" : "Criar categoria"}</Button></div>
     </form>
   </Modal>;
 }

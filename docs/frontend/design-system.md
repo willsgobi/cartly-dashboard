@@ -12,6 +12,7 @@ Use the previously explored Cartly dashboard/login/onboarding layouts as **visua
 ## UI primitives
 Build reusable accessible `Input`, `PasswordInput`, `Button`, `Select`, `Textarea`, `Checkbox`, `FormField`, `Card`, `Dialog`, `Table`, `EmptyState`, `Skeleton`, `Toast` as needed. Use typed native props, `forwardRef` only if necessary for library compatibility, stable IDs, labels and error associations.
 - Buttons: explicit type, disabled/loading semantics and visible focus.
+- Modal actions: close uses an icon-only X with an accessible pt-BR label. Cancel uses the shared text Button variant without a visible background/border. Primary submit actions use white text on primary-dark green, compact typography/padding and a 32px minimum desktop height; coarse pointers retain 44px targets. Focus, disabled/loading behavior and native button semantics remain intact.
 - Forms: label, help text, inline errors, submit progress; never rely on color alone.
 - Tables: responsive overflow, empty/loading/error states, sortable/filterable only when available.
 - Layout: sidebar, company switcher, header, mobile navigation and content; typography hierarchy consistent across modules.

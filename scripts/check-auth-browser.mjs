@@ -346,7 +346,11 @@ export async function checkAuthBrowser(origin, { setProtectedStatus, setCompanie
     assert.equal(await evaluate("document.querySelector('[name=name]').value"), "Bebidas");
     await click("Cancelar");
     await evaluate("document.querySelector('[aria-label=\"Editar Bebidas\"]').click()");
-    await fill("name", "Sucos"); await click("Salvar alterações");
+    await fill("name", "Sucos");
+    assert(await evaluate("(()=>{const d=document.querySelector('dialog[open]');const close=d.querySelector('[aria-label=\"Fechar diálogo\"]');const cancel=[...d.querySelectorAll('button')].find(b=>b.textContent==='Cancelar');const save=d.querySelector('button[type=submit]');return !!close.querySelector('svg')&&!close.textContent.trim()&&getComputedStyle(cancel).backgroundColor==='rgba(0, 0, 0, 0)'&&getComputedStyle(cancel).borderTopColor==='rgba(0, 0, 0, 0)'&&getComputedStyle(save).color==='rgb(255, 255, 255)'&&save.getBoundingClientRect().height<=44})()"), "Modal actions must use an accessible close icon, text cancel and compact white-text save");
+    const categoryModalShot = await send("Page.captureScreenshot", { format: "png" });
+    writeFileSync(join(profile, "category-modal-actions.png"), Buffer.from(categoryModalShot.data, "base64"));
+    await click("Salvar alterações");
     await wait("!document.querySelector('dialog[open]') && !!document.querySelector('[aria-label=\"Editar Sucos\"]:not(:disabled)')");
     // One category name activates a deterministic linked-product 409 in the mock only.
     await click("Nova categoria"); await fill("name", "Vinculada"); await click("Criar categoria");
@@ -404,7 +408,7 @@ export async function checkAuthBrowser(origin, { setProtectedStatus, setCompanie
     for (const type of ["VARIANT", "VARIANT_WITH_PRICE"]) products.push({ id: type, name: type === "VARIANT" ? "Camiseta" : "Pizza", description: null, companyId: "a", categoryId: category.id, category: { id: category.id, name: category.name }, type, price: type === "VARIANT" ? 25 : null, variants: [{ id: `${type}-v`, name: "Pequena", price: type === "VARIANT" ? null : 19.5 }], createdAt: "2026-10-17T12:00:00Z", updatedAt: "2026-10-17T12:00:00Z" });
     await navigate("Page.reload"); await wait("!!document.querySelector('[aria-label=\"Detalhes de Pizza\"]:not(:disabled)')");
     await evaluate("document.querySelector('[aria-label=\"Detalhes de Pizza\"]').click()");
-    await wait("document.querySelector('dialog[open]')?.innerText.includes('19,50')"); await click("Fechar");
+    await wait("document.querySelector('dialog[open]')?.innerText.includes('19,50')"); await evaluate("document.querySelector('[aria-label=\"Fechar diálogo\"]').click()");
     for (const width of [320, 390, 768, 1280]) {
       await send("Emulation.setDeviceMetricsOverride", { width, height: 1000, deviceScaleFactor: 1, mobile: width < 640 });
       assert(await evaluate("document.documentElement.scrollWidth<=innerWidth"), `Product overflow at ${width}px`);
@@ -485,7 +489,7 @@ export async function checkAuthBrowser(origin, { setProtectedStatus, setCompanie
     await fill("name", "Pequena renomeada"); await click("Salvar alterações");
     await wait("!document.querySelector('form[aria-label=\"Editar variante\"]') && !!document.querySelector('[aria-label=\"Editar variante Pequena renomeada\"]:not(:disabled)')");
     assert.deepEqual(variantUpdates[0].body, { name: "Pequena renomeada" }); assert.equal(sharedProduct.price, 59.9);
-    await click("Fechar");
+    await evaluate("document.querySelector('[aria-label=\"Fechar diálogo\"]').click()");
     await evaluate("document.querySelector('[aria-label=\"Detalhes de Pizza nova\"]').click()");
     await wait("!!document.querySelector('[aria-label=\"Editar variante Restaurada\"]:not(:disabled)')");
     await evaluate("document.querySelector('[aria-label=\"Editar variante Restaurada\"]').click()");

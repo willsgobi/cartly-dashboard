@@ -2,7 +2,7 @@ import type { ComponentPropsWithRef } from "react";
 import styles from "./Button.module.scss";
 
 export type ButtonProps = ComponentPropsWithRef<"button"> & {
-  variant?: "primary" | "secondary" | "outline";
+  variant?: "primary" | "secondary" | "outline" | "text";
   loading?: boolean;
 };
 

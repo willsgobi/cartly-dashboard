@@ -24,6 +24,6 @@ export function DeleteProductDialog({ companyId, product, onClose, onDeleted }: 
   return <Modal title="Excluir produto" busy={busy} onClose={onClose}><div className={styles.form}>
     <p>Deseja excluir <strong>{product.name}</strong>? O produto será removido da listagem de produtos ativos. Seus registros relacionados serão preservados.</p>
     {error && <p role="alert" className={styles.error}>{error}</p>}
-    <div className={styles.actions}><Button data-initial-focus className={styles.compact} variant="outline" disabled={busy} onClick={onClose}>Cancelar</Button><Button className={`${styles.compact} ${styles.deleteButton}`} loading={busy} onClick={confirm}>Excluir produto</Button></div>
+    <div className={styles.actions}><Button data-initial-focus className={styles.compact} variant="text" disabled={busy} onClick={onClose}>Cancelar</Button><Button className={`${styles.compact} ${styles.deleteButton}`} loading={busy} onClick={confirm}>Excluir produto</Button></div>
   </div></Modal>;
 }

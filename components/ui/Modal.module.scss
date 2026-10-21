@@ -3,3 +3,16 @@
 .heading { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); margin-bottom: var(--space-6); }
 .heading h2 { font-size: var(--font-size-lg); }
 .heading > button { flex-shrink: 0; white-space: nowrap; }
+.heading .close { width: 36px; min-height: 36px; padding: var(--space-2); }
+.close svg { flex-shrink: 0; }
+.modal button[type="submit"] {
+  min-height: 32px;
+  padding: var(--space-1) var(--space-3);
+  font-size: var(--font-size-sm);
+  background: var(--color-primary-dark);
+  color: var(--color-surface);
+}
+@media (pointer: coarse) {
+  .heading .close { width: 44px; min-height: 44px; }
+  .modal button[type="submit"] { min-height: 44px; }
+}

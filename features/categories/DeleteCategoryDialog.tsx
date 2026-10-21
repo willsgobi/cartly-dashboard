@@ -24,7 +24,7 @@ export function DeleteCategoryDialog({ companyId, category, onClose, onDeleted }
   return <Modal title="Excluir categoria" busy={busy} onClose={onClose}>
     <div className={styles.form}><p>Deseja excluir a categoria <strong>{category.name}</strong>? Esta exclusão é permanente.</p><p>Categorias com produtos vinculados não podem ser excluídas. A exclusão requer permissão de administrador.</p>
       {error && <p role="alert" className={styles.error}>{error}</p>}
-      <div className={styles.actions}><Button data-initial-focus variant="outline" disabled={busy} onClick={onClose}>Cancelar</Button><Button className={styles.deleteButton} loading={busy} onClick={confirm}>Excluir categoria</Button></div>
+      <div className={styles.actions}><Button data-initial-focus variant="text" disabled={busy} onClick={onClose}>Cancelar</Button><Button className={styles.deleteButton} loading={busy} onClick={confirm}>Excluir categoria</Button></div>
     </div>
   </Modal>;
 }
