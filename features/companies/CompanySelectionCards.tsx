@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import type { Company } from "../../lib/api/companies";
 import { Button } from "../../components/ui/Button";
+import { formatCnpj } from "./format";
 import styles from "./selection.module.scss";
 
 export function CompanySelectionCards({ companies }: { companies: Company[] }) {
@@ -12,7 +13,7 @@ export function CompanySelectionCards({ companies }: { companies: Company[] }) {
   return <ul className={styles.grid} aria-label="Empresas disponíveis" aria-busy={pending !== null}>
     {companies.map((company) => <li key={company.id} className={styles.card}>
       <h2>{company.name}</h2>
-      <p>Documento: {company.document}</p>
+      <p>Documento: {formatCnpj(company.document)}</p>
       <form action="/api/companies/active" method="post" onSubmit={(event) => {
         event.preventDefault();
         if (inFlight.current) return;

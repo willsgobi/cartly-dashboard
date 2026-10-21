@@ -7,7 +7,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 /** Actual browser cookie/history checks complement the production HTTP assertions. */
-export async function checkAuthBrowser(origin, { setProtectedStatus, setCompanies, companyFixtures, createdCompanies, setCategoryStatus, setProductStatus, setVariantStatus, variantUpdates, recoveryRequests, products, getProductCategory }) {
+export async function checkAuthBrowser(origin, { setProtectedStatus, setCompanies, companyFixtures, createdCompanies, setCategoryStatus, setProductStatus, setVariantStatus, variantUpdates, recoveryRequests, companySettingsUpdates, setCompanySettingsStatus, products, getProductCategory }) {
   const chrome = process.env.CHROME_PATH ?? "C:/Program Files/Google/Chrome/Application/chrome.exe";
   assert(existsSync(chrome), "Set CHROME_PATH to a local Chrome/Chromium executable");
   const reservation = createServer();
@@ -94,8 +94,9 @@ export async function checkAuthBrowser(origin, { setProtectedStatus, setCompanie
         await wait("[...document.querySelectorAll('[data-user-menu] summary')].some(e=>e.getClientRects().length)");
         await evaluate("(()=>{if(![...document.querySelectorAll('button')].some(e=>e.getClientRects().length&&e.textContent.trim()==='Sair'))[...document.querySelectorAll('[data-user-menu] summary')].find(e=>e.getClientRects().length)?.click()})()");
       }
-      await wait(`[...document.querySelectorAll('button,a')].some(e=>e.getClientRects().length&&!e.disabled&&e.textContent.trim()===${JSON.stringify(text)})`);
-      await evaluate(`(()=>{const b=[...document.querySelectorAll('button,a')].find(e=>e.getClientRects().length&&e.textContent.trim()===${JSON.stringify(text)});if(!b)throw new Error('Missing control');b.focus();b.click()})()`);
+      const control = `(()=>{const root=[...document.querySelectorAll('dialog[open]')].at(-1)??document;return [...root.querySelectorAll('button,a')].find(e=>e.getClientRects().length&&!e.disabled&&e.textContent.trim()===${JSON.stringify(text)})})()`;
+      await wait(`!!${control}`);
+      await evaluate(`(()=>{const b=${control};if(!b)throw new Error('Missing control');b.focus();b.click()})()`);
     };
     const navigate = async (method, params = {}) => {
       const previous = navigations;
@@ -309,7 +310,7 @@ export async function checkAuthBrowser(origin, { setProtectedStatus, setCompanie
       }
     }
     assert(await evaluate("!!document.querySelector('aside nav a[aria-current=page]')"), "Desktop navigation must highlight the dashboard");
-    assert.equal(await evaluate("document.querySelectorAll('aside nav a').length"), 3, "Only implemented modules must be links");
+    assert.equal(await evaluate("document.querySelectorAll('aside nav a').length"), 4, "Only implemented modules must be links");
     assert.equal(await evaluate("document.querySelector('aside').getBoundingClientRect().width"), 224, "Desktop sidebar must use the reduced width");
     assert(await evaluate("!!document.querySelector('aside [aria-label=\"Minha conta\"]')"));
     assert(await evaluate("![...document.querySelectorAll('header [data-user-menu]')].some(element => !element.closest('dialog'))"), "Account controls must appear only in the sidebar");
@@ -555,6 +556,52 @@ export async function checkAuthBrowser(origin, { setProtectedStatus, setCompanie
     assert.equal((await sessionCookies())[0]?.value, existingSession, "Reset must not alter an existing session");
     assert(urls.every((url) => !url.includes("00001234") && !url.includes("11111111") && !url.includes("synthetic-new-password") && !url.includes("test%40example.com") && !url.includes("unknown%40example.com")), "Recovery data must not enter URLs");
     console.log("PASS browser password recovery: public Server Actions, generic confirmation, memory-only email, exact DTO/leading zeros, invalid OTP, responsive form, reset/login and unchanged existing session; screenshot " + profile);
+    // F17: real settings BFF, partial updates, header synchronization and existing-address editing.
+    setCompanies(companyFixtures);
+    await go("/dashboard/settings/company");
+    await wait("location.pathname==='/select-company' && !!document.querySelector('[aria-label=\"Acessar empresa Empresa a\"]')");
+    await evaluate("document.querySelector('[aria-label=\"Acessar empresa Empresa a\"]').click()");
+    await wait("location.pathname==='/dashboard' && !!document.querySelector('header select')");
+    await click("Configurações");
+    await wait("location.pathname==='/dashboard/settings/company' && !!document.querySelector('form[aria-label=\"Dados da empresa\"] [name=name]')");
+    assert.equal(await evaluate("document.querySelector('form[aria-label=\"Dados da empresa\"] button[type=submit]').disabled"), true, "Unchanged company must not submit");
+    await fill("name", "Empresa atualizada"); setCompanySettingsStatus(403); await click("Salvar alterações");
+    await wait("document.querySelector('form[aria-label=\"Dados da empresa\"]')?.innerText.includes('Você não tem permissão')");
+    assert.equal((await sessionCookies()).length, 1); assert.equal(await evaluate("document.querySelector('[name=name]').value"), "Empresa atualizada");
+    setCompanySettingsStatus(200); await click("Salvar alterações");
+    await wait("document.body.innerText.includes('Dados da empresa atualizados com sucesso.') && document.querySelector('header [role=status]')?.textContent==='Empresa atualizada' && document.querySelector('form[aria-label=\"Dados da empresa\"] button[type=submit]').disabled");
+    assert.deepEqual(companySettingsUpdates[0], { companyId: "a", addressId: undefined, body: { name: "Empresa atualizada" } });
+    assert.equal(await evaluate("document.querySelector('header select').value"), "a", "Header refresh must preserve active company ID");
+    assert(await evaluate("document.querySelector('[name=document]').readOnly"), "Company CNPJ must not be editable");
+    assert.equal(await evaluate("document.querySelector('[name=document]').value"), "11.222.333/0001-81");
+    await evaluate("document.querySelector('[aria-label=\"Editar endereço 2\"]').click()");
+    await wait("!!document.querySelector('dialog[open] [name=zipCode]')");
+    assert(await evaluate("[...document.querySelectorAll('dialog[open] input')].some(input=>input.readOnly&&input.value==='002')"), "Number must remain read-only");
+    await fill("zipCode", "13000-000"); await click("Consultar CEP");
+    await wait("document.querySelector('dialog[open]')?.innerText.includes('Informe o endereço manualmente')");
+    await fill("street", "Rua atualizada"); await fill("city", "Campinas");
+    await click("Salvar alterações");
+    await wait("!document.querySelector('dialog[open]') && document.body.innerText.includes('Rua atualizada, 002') && !document.querySelector('[aria-label=\"Editar endereço 2\"]').disabled");
+    assert.deepEqual(companySettingsUpdates[1], { companyId: "a", addressId: "a-address-2", body: { zipCode: "13000000", street: "Rua atualizada", city: "Campinas" } });
+    await navigate("Page.reload");
+    await wait("document.body.innerText.includes('Rua atualizada, 002') && document.querySelector('[name=name]')?.value==='Empresa atualizada'");
+    for (const width of [320, 390, 768, 1280]) {
+      await send("Emulation.setDeviceMetricsOverride", { width, height: 1000, deviceScaleFactor: 1, mobile: width < 768 });
+      assert(await evaluate("document.documentElement.scrollWidth<=innerWidth"), "Settings page must fit viewport");
+      if (width === 390 || width === 1280) {
+        const shot = await send("Page.captureScreenshot", { format: "png", captureBeyondViewport: true });
+        writeFileSync(join(profile, `company-settings-${width}.png`), Buffer.from(shot.data, "base64"));
+      }
+    }
+    await evaluate("window.companySpecificCachedData='old-settings-data';(()=>{const field=document.querySelector('header select');field.value='b';field.dispatchEvent(new Event('change',{bubbles:true}))})()");
+    await wait("location.pathname==='/dashboard' && document.querySelector('header select')?.value==='b'");
+    assert(await evaluate("window.companySpecificCachedData===undefined"));
+    await click("Configurações");
+    await wait("document.body.innerText.includes('Nenhum endereço cadastrado para esta empresa.') && document.querySelector('[name=name]')?.value==='Empresa b'");
+    assert(!(await evaluate("document.body.innerText")).includes("Rua atualizada"), "Company settings must not mix addresses");
+    setCompanySettingsStatus(401); await navigate("Page.reload");
+    await wait("location.pathname==='/login'"); assert.equal((await sessionCookies()).length, 0); setCompanySettingsStatus(200);
+    console.log("PASS browser company settings: protected scope, company/address partial PATCH, 403/409 preservation, header refresh, read-only number, ViaCEP manual fallback, persisted reload, empty addresses, company switching/401 and responsive screenshots " + profile);
     assert(urls.every((url) => !url.includes("synthetic-password") && !url.includes("synthetic-wrong")), "Passwords must not enter URLs");
     assert.deepEqual(errors, [], "No browser JavaScript exceptions");
     console.log("PASS browser companies: zero/one/multiple companies, native selection/switch, refresh restoration, removal, document cache reset, onboarding boundary, logout/new-session isolation");

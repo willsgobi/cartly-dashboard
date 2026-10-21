@@ -4,6 +4,7 @@ import { useId, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useActiveCompany } from "./ActiveCompanyContext";
+import { formatCnpj } from "./format";
 import { companySelectionSchema, type CompanySelectionValues } from "./schemas";
 import styles from "./companies.module.scss";
 
@@ -45,7 +46,7 @@ export function CompanySelector({ compact = false }: { compact?: boolean }) {
             if (form && value !== activeCompany?.id) await selectCompany(form);
           }}>
             <option value="" disabled>Selecione uma empresa</option>
-            {companies.map((company) => <option key={company.id} value={company.id}>{company.name} — {company.document}</option>)}
+            {companies.map((company) => <option key={company.id} value={company.id}>{company.name} — {formatCnpj(company.document)}</option>)}
           </select>
           {errors.companyId && <p id={`${id}-error`} role="alert" className={styles.error}>{errors.companyId.message}</p>}
           {submitting && <p role="status">Alterando empresa...</p>}

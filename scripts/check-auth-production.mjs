@@ -30,6 +30,15 @@ let productStatus = 200;
 let variantStatus = 200;
 let variantSequence = 0;
 const variantUpdates = [];
+let companySettingsStatus = 200;
+const companySettingsUpdates = [];
+const companyDetails = new Map(companyFixtures.map((company) => [company.id, {
+  ...company, document: "11222333000181",
+  addresses: company.id === "a" ? [1, 2].map((number) => ({
+    id: `${company.id}-address-${number}`, street: `Rua ${number}`, number: `00${number}`,
+    city: "São Paulo", state: "SP", zipCode: "01001000", country: "Brazil", createdAt: company.createdAt, updatedAt: company.updatedAt,
+  })) : [],
+}]));
 const recoveryRequests = [];
 let loginPassword = "synthetic-password";
 const backend = createServer(async (request, response) => {
@@ -75,6 +84,25 @@ const backend = createServer(async (request, response) => {
   } else if (request.url === "/companies" && request.method === "GET") {
     const status = request.headers.authorization === `Bearer ${token}` ? protectedStatus : 401;
     response.writeHead(status).end(JSON.stringify(status === 200 ? accessibleCompanies : { message: "private diagnostic" }));
+  } else if (/^\/companies\/[^/]+(?:\/address\/[^/]+)?$/.test(request.url)) {
+    if (request.headers.authorization !== `Bearer ${token}`) { response.writeHead(401).end("{}"); return; }
+    if (companySettingsStatus !== 200) { response.writeHead(companySettingsStatus).end(JSON.stringify({ message: "private settings diagnostic" })); return; }
+    const [, , companyId, , addressId] = request.url.split("/");
+    const company = companyDetails.get(companyId);
+    if (!company || !accessibleCompanies.some((item) => item.id === companyId)) { response.writeHead(404).end("{}"); return; }
+    if (request.method === "GET" && !addressId) { response.end(JSON.stringify(company)); return; }
+    if (request.method !== "PATCH") { response.writeHead(405).end("{}"); return; }
+    let raw = ""; for await (const chunk of request) raw += chunk;
+    const body = JSON.parse(raw);
+    const keys = addressId ? ["street", "city", "state", "zipCode", "country"] : ["name", "document"];
+    assert(Object.keys(body).length > 0 && Object.keys(body).every((key) => keys.includes(key)), "Only documented partial company/address fields are allowed");
+    if (body.document === "04252011000110") { response.writeHead(409).end("{}"); return; }
+    const record = addressId ? company.addresses.find((address) => address.id === addressId) : company;
+    if (!record) { response.writeHead(404).end("{}"); return; }
+    Object.assign(record, body);
+    if (!addressId) accessibleCompanies = accessibleCompanies.map((item) => item.id === companyId ? { ...item, name: company.name, document: company.document } : item);
+    companySettingsUpdates.push({ companyId, addressId, body });
+    response.end(JSON.stringify(record));
   } else if (/^\/companies\/[^/]+\/categories(?:\/[^/]+)?$/.test(request.url)) {
     const [, , companyId, , categoryId] = request.url.split("/");
     if (request.headers.authorization !== `Bearer ${token}`) { response.writeHead(401).end("{}"); return; }
@@ -321,11 +349,13 @@ try {
       setVariantStatus: (status) => { variantStatus = status; },
       variantUpdates,
       recoveryRequests,
+      companySettingsUpdates,
+      setCompanySettingsStatus: (status) => { companySettingsStatus = status; },
       products,
       getProductCategory: () => (categories.get("a") ?? [])[0],
     });
   }
-  assert(upstreamPaths.every((path) => ["/auth/login", "/auth/forgot-password", "/auth/reset-password", "/companies"].includes(path) || /^\/companies\/[^/]+\/categories(?:\/[^/]+)?$/.test(path) || /^\/products(?:\/[^/?]+)?(?:\?companyId=[^&]+)?$/.test(path) || /^\/products\/[^/]+\/variants(?:\/[^/?]+)?\?companyId=[^&]+$/.test(path)));
+  assert(upstreamPaths.every((path) => ["/auth/login", "/auth/forgot-password", "/auth/reset-password", "/companies"].includes(path) || /^\/companies\/[^/]+(?:\/address\/[^/]+)?$/.test(path) || /^\/companies\/[^/]+\/categories(?:\/[^/]+)?$/.test(path) || /^\/products(?:\/[^/?]+)?(?:\?companyId=[^&]+)?$/.test(path) || /^\/products\/[^/]+\/variants(?:\/[^/?]+)?\?companyId=[^&]+$/.test(path)));
   console.log("PASS production auth: login, secure cookies, CSRF, GET 405, protected SSR, forged/expired JWT, 401 cleanup, 403 preservation, no-store, no token leakage, logout");
 } catch (error) {
   console.error(error);

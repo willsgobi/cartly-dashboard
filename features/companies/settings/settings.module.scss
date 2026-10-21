@@ -1,0 +1,16 @@
+.container, .form, .fields { display: grid; min-width: 0; gap: var(--space-4); }
+.container { gap: var(--space-6); overflow-wrap: anywhere; }
+.container h2 { font-size: var(--font-size-lg); }
+.card { display: grid; gap: var(--space-4); padding: var(--space-6); border: 1px solid var(--color-border); border-radius: var(--radius-card); background: var(--color-surface); box-shadow: var(--shadow-sm); min-width: 0; }
+.card h3 { font-size: var(--font-size-lg); }
+.fields { padding: 0; margin: 0; border: 0; }
+.actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: var(--space-3); align-items: center; }
+.actions .save { background: var(--color-primary-dark); color: var(--color-surface); min-height: 32px; padding: var(--space-1) var(--space-3); font-size: var(--font-size-sm); }
+.addresses { display: grid; gap: var(--space-4); margin: 0; padding: 0; list-style: none; }
+.address { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: var(--space-4); border-top: 1px solid var(--color-border); padding-top: var(--space-4); }
+.hint { color: var(--color-text-secondary); font-size: var(--font-size-sm); }
+.error { color: var(--color-danger-text); }
+.success { color: var(--color-primary-dark); background: var(--color-primary-light); padding: var(--space-3); border-radius: var(--radius-input); }
+.legend { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+@media (max-width: 35rem) { .card { padding: var(--space-4); } }
+@media (pointer: coarse) { .actions .save { min-height: 44px; } }

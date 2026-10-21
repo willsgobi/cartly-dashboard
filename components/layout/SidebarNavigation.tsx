@@ -10,7 +10,7 @@ const items: { label: string; icon: IconName; href?: string }[] = [
   { label: "Pedidos", icon: "orders" }, { label: "Produtos", icon: "products", href: "/dashboard/products" },
   { label: "Categorias", icon: "categories", href: "/dashboard/categories" }, { label: "Clientes", icon: "customers" },
   { label: "Usuários", icon: "users" }, { label: "Relatórios", icon: "reports" },
-  { label: "Configurações", icon: "settings" },
+  { label: "Configurações", icon: "settings", href: "/dashboard/settings/company" },
 ];
 
 export function SidebarNavigation({ onNavigate }: { onNavigate?: () => void }) {

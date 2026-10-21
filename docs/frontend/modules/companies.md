@@ -25,6 +25,8 @@ POST /api/companies/active is a local Next.js endpoint, not a new NestJS operati
 
 ## Context and cache lifecycle
 
+F17 adds /dashboard/settings/company and the existing Configurações navigation entry for company details and editing existing addresses. It shares this same context, membership checks and persistence. Company name saves refresh the authoritative server list/header while preserving the active ID; CNPJ remains read-only and is rejected in BFF updates. Address-only changes preserve unrelated company form edits. See [company-settings.md](company-settings.md) for exact BFF boundaries, ViaCEP reuse and the read-only address number limitation.
+
 ActiveCompanyProvider/useActiveCompany expose the verified list and selected DTO to company-scoped descendants. The subtree is keyed by the active company ID, so a changed scope discards local state and runs effect cleanup during a server refresh. Native POST selection intentionally starts a full document navigation, also dropping router/client caches and terminating the prior document's in-flight work. No persistent company-data cache, localStorage or server-state dependency is introduced.
 
 Future company data consumers must include company context at the contract-defined location and rely on backend authorization for each request. Context membership is not proof of permission, and resource IDs do not establish ownership. Persistent caches introduced later must include identity/company keys and clear scoped data on session/selection changes. Consumers must clean up their own asynchronous effects.

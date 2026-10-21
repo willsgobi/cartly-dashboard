@@ -42,6 +42,7 @@ Read `docs/contracts/cartly-openapi.json` (OpenAPI 3.0, Cartly API v1.0); backen
 | `DELETE` | `/products/{productId}/variants/{variantId}` | — | — | JWT |
 
 ## Specific contract notes
+- F17 uses the existing company GET/PATCH and address PATCH operations, with exact path parameters and partial DTOs. Local BFF queries verify the active scope only and are not forwarded to NestJS. UpdateCompanyAddressDto omits number, so it remains read-only. Company details/address responses are runtime-validated; no contract edits or new backend operation are introduced. See modules/company-settings.md.
 - F13 reuses public Server Actions for POST /auth/forgot-password (EmailDto to GenericMessageResponseDto) and POST /auth/reset-password (ResetPasswordDto to SafeUserResponseDto). Both document 200/400. Inputs are validated server-side; confirmPassword is stripped, JWTs/cookies are not forwarded, and upstream requests are no-store. The UI uses fixed generic recovery feedback and never renders upstream messages. No reset-specific resend endpoint or session mutation is introduced.
 - `PATCH /products/{productId}` body `UpdateProductDto` **requires `companyId`**.
 - `DELETE /products/{productId}` **requires JSON body** `DeleteProductDto` with `companyId`; HTTP client must support deletion with a body.
