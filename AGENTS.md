@@ -1,9 +1,9 @@
 
-# Cartly Dashboard — Agent Instructions
+# Venduzily Dashboard — Agent Instructions
 
 ## Project Overview
 
-Cartly Dashboard is an administrative web application
+Venduzily Dashboard is an administrative web application
 built with Next.js, React, TypeScript, and SCSS Modules.
 
 This repository contains only the administrative dashboard.
@@ -42,7 +42,7 @@ Follow the existing project conventions.
 
 The OpenAPI specification is available at:
 
-`docs/contracts/cartly-openapi.json`
+`docs/contracts/venduzily-openapi.json`
 
 Before integrating an endpoint:
 
@@ -81,7 +81,7 @@ Always respect the active company context.
 
 Follow `docs/frontend/design-system.md`.
 
-- Use the Cartly color palette.
+- Use the Venduzily color palette.
 - Use Inter as the primary font.
 - Maintain consistent spacing and typography.
 - Reuse existing UI components.

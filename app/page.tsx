@@ -6,7 +6,7 @@ export default function Home() {
   return (
     <main className={styles.page}>
       <header className={styles.header}>
-        <p className={styles.brand}>Cartly</p>
+        <p className={styles.brand}>Venduzily</p>
         <h1>Componentes de interface</h1>
         <p>Demonstração visual da base do painel administrativo.</p>
       </header>

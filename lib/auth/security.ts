@@ -15,8 +15,8 @@ export function safeReturnTo(value: unknown): string {
     return "/dashboard";
   }
   try {
-    const url = new URL(value, "https://cartly.invalid");
-    if (url.origin !== "https://cartly.invalid" || !/^(?:\/dashboard(?:\/[a-zA-Z0-9_-]+)*\/?|\/select-company)$/.test(url.pathname)) {
+    const url = new URL(value, "https://venduzily.invalid");
+    if (url.origin !== "https://venduzily.invalid" || !/^(?:\/dashboard(?:\/[a-zA-Z0-9_-]+)*\/?|\/select-company)$/.test(url.pathname)) {
       return "/dashboard";
     }
     return url.pathname + url.search;

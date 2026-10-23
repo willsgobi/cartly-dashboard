@@ -30,6 +30,7 @@ export function CompanyOnboardingForm() {
   }
 
   async function submit(values: CompanyFormValues) {
+    console.log(values)
     if (inFlight.current || created) return;
     inFlight.current = true;
     lookups.cancel();
@@ -38,6 +39,7 @@ export function CompanyOnboardingForm() {
       const result = await createCompany(createCompanySchema.parse(values));
       setCreated(result);
     } catch (error) {
+      console.log(error)
       const text = error instanceof ApiError
         ? error.status === 409 ? "Já existe uma empresa com este CNPJ. Volte e confira o documento."
           : error.status === 400 ? "Confira os dados da empresa e do endereço antes de tentar novamente." : error.message

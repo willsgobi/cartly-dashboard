@@ -16,7 +16,7 @@ export async function CompanyWorkspace({ onboarding = false, selectionError = fa
       <h2>Cadastre sua empresa</h2><CompanyOnboardingForm /><a href="/dashboard">{access.companies.length ? "Voltar ao dashboard" : "Verificar empresas novamente"}</a>
     </section>;
     return <section className={dashboardStyles.card} aria-label="Visão geral do dashboard">
-      <h2>{access.user?.name ? `Olá, ${access.user.name}!` : "Boas-vindas ao Cartly!"}</h2>
+      <h2>{access.user?.name ? `Olá, ${access.user.name}!` : "Boas-vindas ao Venduzily!"}</h2>
       <p>Organize a gestão do seu negócio por aqui.</p>
       {selectionError && <p role="alert" className={dashboardStyles.error}>Não foi possível selecionar a empresa. Verifique as empresas disponíveis e tente novamente.</p>}
       <div className={dashboardStyles.empty}>

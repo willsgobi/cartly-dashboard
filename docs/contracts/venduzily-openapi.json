@@ -1263,8 +1263,8 @@
     }
   },
   "info": {
-    "title": "Cartly API",
-    "description": "Cartly backend API documentation",
+    "title": "Venduzily API",
+    "description": "Venduzily backend API documentation",
     "version": "1.0",
     "contact": {}
   },

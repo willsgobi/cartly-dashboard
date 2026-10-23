@@ -1,14 +1,14 @@
 # Dashboard home
 
 ## Design goal
-Use the Cartly visual identity for the administrative shell: sidebar, company selector, account controls, white surfaces and responsive mobile navigation. Metrics, charts and activities remain future modules with verified API contracts.
+Use the Venduzily visual identity for the administrative shell: sidebar, company selector, account controls, white surfaces and responsive mobile navigation. Metrics, charts and activities remain future modules with verified API contracts.
 
 ## Contract boundary
 Provided Swagger does not include analytics, orders, revenue, recent activity or dashboard metrics endpoints. Do not invent data sources, financial values or fake live KPIs. A visual-only scaffold with clearly labeled demo data requires an explicit task; otherwise show clearly defined placeholders or focus first on shell/navigation and supported counts derived from available categories/products, with no claims of financial meaning.
 
 ## F08 App Router shell
 
-app/(dashboard)/layout.tsx composes the server DashboardLayout under Suspense. Modular components in components/layout provide Sidebar, SidebarNavigation, DashboardHeader, MobileNavigation, UserMenu, code-native decorative icons and SCSS Modules. The existing Cartly logo, Inter and centralized color/spacing/radius/shadow tokens are reused. Pages remain Server Components; only navigation/pathname, drawer, account disclosure and the existing company selector require client behavior.
+app/(dashboard)/layout.tsx composes the server DashboardLayout under Suspense. Modular components in components/layout provide Sidebar, SidebarNavigation, DashboardHeader, MobileNavigation, UserMenu, code-native decorative icons and SCSS Modules. The existing Venduzily logo, Inter and centralized color/spacing/radius/shadow tokens are reused. Pages remain Server Components; only navigation/pathname, drawer, account disclosure and the existing company selector require client behavior.
 
 features/companies/server-context.ts memoizes one authoritative guard/list result with React cache within the current server request. Layout and page both use it: there is no second company context, duplicate backend list call or persistent session/data cache. The production test explicitly checks one GET /companies per dashboard render. The original connection() boundary, backend 401/403 handling and per-page/data authorization requirements remain in place. Denied/unavailable access withholds shell company/profile data and renders the existing safe page state; missing/expired sessions redirect through F03.
 

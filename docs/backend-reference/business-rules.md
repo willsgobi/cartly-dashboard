@@ -1,4 +1,4 @@
-# Cartly — Business Rules
+# Venduzily — Business Rules
 
 ## Users
 

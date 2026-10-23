@@ -1,4 +1,4 @@
-# Cartly — Architecture
+# Venduzily — Architecture
 
 ## Technology Stack
 

@@ -3,7 +3,7 @@
 F03 now provides the server-only cookie/BFF session boundary described in [session-management.md](session-management.md). F02 transport behavior below remains unchanged; its historical references to a future session task are superseded by that implemented decision.
 
 ## Source of truth
-Read `docs/contracts/cartly-openapi.json` (OpenAPI 3.0, Cartly API v1.0); backend reference docs are in `docs/backend-reference/`. The corrected F12 snapshot contains **24 operations over 16 paths and 29 component schemas**. The old backend `api.md` is an incomplete prose summary, not an alternative endpoint source. The contract declares no `servers` URL: set environment-specific base URL explicitly.
+Read `docs/contracts/venduzily-openapi.json` (OpenAPI 3.0, Venduzily API v1.0); backend reference docs are in `docs/backend-reference/`. The corrected F12 snapshot contains **24 operations over 16 paths and 29 component schemas**. The old backend `api.md` is an incomplete prose summary, not an alternative endpoint source. The contract declares no `servers` URL: set environment-specific base URL explicitly.
 
 ## Rules
 - Centralized typed HTTP adapter; bearer JWT on operations marked `security: [{bearer: []}]`.

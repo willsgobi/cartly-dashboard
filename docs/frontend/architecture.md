@@ -1,4 +1,4 @@
-# Frontend architecture — Cartly Dashboard
+# Frontend architecture — Venduzily Dashboard
 
 ## Scope and stack
 - Separate Next.js App Router application for the **administrative dashboard** only. Public ordering site and POS belong to other applications.
@@ -42,7 +42,7 @@ The protected /select-company page reuses that request-scoped context and the ex
 
 F17 lives in features/companies/settings and /dashboard/settings/company, linked from the existing Configurações navigation. Fixed company/detail/address BFF routes reuse F02/F03/F06 verification and generated DTOs. Existing addresses are edited by ID; number remains read-only under the supplied contract. Successful company edits refetch details and refresh the server layout/F06 list while retaining active ID and unrelated form state. ViaCEP calls reuse F07's transport/handler; scope teardown cancels all pending work. See [modules/company-settings.md](modules/company-settings.md).
 
-F07 fills /dashboard/onboarding with a two-step form in features/companies/onboarding. Authenticated same-origin Route Handlers forward only fixed ReceitaWS/ViaCEP lookups and the documented Cartly creation DTO. The lookup hook isolates cancellation/edit-version logic from presentation; failed lookups permit manual input. Creation refreshes the verified F06 list and sets the existing preference only if the created ID is accessible, then uses a full navigation. A committed creation with failed synchronization offers only the existing F06 selection POST, preventing duplicate creation. See [modules/onboarding.md](modules/onboarding.md) for public-provider quotas and deployment limits.
+F07 fills /dashboard/onboarding with a two-step form in features/companies/onboarding. Authenticated same-origin Route Handlers forward only fixed ReceitaWS/ViaCEP lookups and the documented Venduzily creation DTO. The lookup hook isolates cancellation/edit-version logic from presentation; failed lookups permit manual input. Creation refreshes the verified F06 list and sets the existing preference only if the created ID is accessible, then uses a full navigation. A committed creation with failed synchronization offers only the existing F06 selection POST, preventing duplicate creation. See [modules/onboarding.md](modules/onboarding.md) for public-provider quotas and deployment limits.
 
 ## Data state
 

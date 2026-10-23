@@ -10,8 +10,8 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Cartly — Componentes",
-  description: "Demonstração dos componentes de interface do Cartly.",
+  title: "Venduzily — Componentes",
+  description: "Demonstração dos componentes de interface do Venduzily.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

@@ -1,4 +1,4 @@
-# Cartly — Authorization
+# Venduzily — Authorization
 
 ## Authentication
 

@@ -1,4 +1,4 @@
-# Cartly Dashboard — implementation plan
+# Venduzily Dashboard — implementation plan
 
 ## Protocol
 One task at a time, in the order of dependencies. `TODO` → `IN PROGRESS` → `DONE` only with acceptance evidence. Do not implement unsupported modules or undocumented endpoints.
@@ -27,7 +27,7 @@ Start with **F01**. The agent must only perform subsequent tasks after explicit 
 
 ## F16 scope and API prerequisites - 2026-10-20
 
-Requested extension: allow users to view deleted products and reactivate them within the active company, reusing the existing product listing, BFF/session infrastructure and Cartly UI. F10 implements soft deletion only; this extension was not included in its acceptance criteria.
+Requested extension: allow users to view deleted products and reactivate them within the active company, reusing the existing product listing, BFF/session infrastructure and Venduzily UI. F10 implements soft deletion only; this extension was not included in its acceptance criteria.
 
 - Provide a product lifecycle filter for active, deleted and all products once the API documents the corresponding list semantics and response fields.
 - Show a restore action for deleted products, confirm the operation, prevent duplicate requests and refresh the listing after success. Preserve company isolation and existing 401/403, loading, empty, network-error and stale-request behavior.
@@ -36,7 +36,7 @@ Requested extension: allow users to view deleted products and reactivate them wi
 
 ## F01 acceptance evidence — 2026-10-16
 
-- Replaced starter CSS with global SCSS and centralized Cartly tokens; configured Inter 400/500/600/700 through next/font/google.
+- Replaced starter CSS with global SCSS and centralized Venduzily tokens; configured Inter 400/500/600/700 through next/font/google.
 - Added native typed Input/Button primitives with SCSS Modules, ref support, label/error associations, keyboard focus, disabled states and button loading/variants.
 - Added the component demonstration at /; the existing /app route reuses it with a nested layout that inherits the root document and styles.
 - Removed Tailwind/Geist starter imports from the nested route. No application, styling or package references remain.
@@ -89,7 +89,7 @@ Requested extension: allow users to view deleted products and reactivate them wi
 ## F06 acceptance evidence — 2026-10-16
 
 - Reused F02/F03's authenticated GET /companies, deriving Company from the unchanged OpenAPI DTO and extracting its runtime decoder. The rendering guard now retains that verified list instead of discarding it, so company rendering does not issue a duplicate probe. JWTs remain server-only and requests remain no-store.
-- Added reusable ActiveCompanyProvider/useActiveCompany and an accessible native company selector using existing Button, Cartly SCSS/tokens, React Hook Form and Zod. Zero companies redirect to a protected /dashboard/onboarding empty boundary; one is automatic; multiple require a verified preference or explicit selection. The boundary contains retry/logout only, with no F07 creation form or backend mutation.
+- Added reusable ActiveCompanyProvider/useActiveCompany and an accessible native company selector using existing Button, Venduzily SCSS/tokens, React Hook Form and Zod. Zero companies redirect to a protected /dashboard/onboarding empty boundary; one is automatic; multiple require a verified preference or explicit selection. The boundary contains retry/logout only, with no F07 creation form or backend mutation.
 - Added a session-bound HttpOnly host-only company preference, Secure in production. Restoration resolves only against the current authenticated accessible list. Malformed/removed/foreign-session IDs are ignored, including overlapping company lists. Login/logout/401 clear the preference; 403 preserves the session. The cookie is a selection hint and never proof of authorization.
 - Added a same-origin native POST selection boundary that re-fetches membership through the authenticated client before saving. Full document switching clears router/document caches and prior in-flight work. The context also keys its subtree by company ID, resetting company-local state/effects during scope changes. No persistent company-data cache or new dependency was introduced.
 - Added safe loading, empty, denied/unavailable and selection-error states. Existing 401 redirects, expiration handling, CSRF and no-store behavior remain in place. The initial HTML explicitly renders an empty selection before hydration when multiple companies have no valid preference.
@@ -99,12 +99,12 @@ Requested extension: allow users to view deleted products and reactivate them wi
 
 ## F07 acceptance evidence — 2026-10-17
 
-- Added a responsive two-step company/address form using React Hook Form/Zod and existing Cartly Input/Button/tokens. Values persist across steps, focus follows navigation, autofilled fields remain editable, and lookup/creation feedback is independent. CNPJ format/check digits and eight-digit CEP are validated and normalized; only exact CreateCompanyDto fields are submitted. Manual creation does not depend on lookup success.
+- Added a responsive two-step company/address form using React Hook Form/Zod and existing Venduzily Input/Button/tokens. Values persist across steps, focus follows navigation, autofilled fields remain editable, and lookup/creation feedback is independent. CNPJ format/check digits and eight-digit CEP are validated and normalized; only exact CreateCompanyDto fields are submitted. Manual creation does not depend on lookup success.
 - Added protected same-origin lookup Route Handlers calling only fixed ReceitaWS/ViaCEP URLs. Requests have eight-second timeouts, cancellation, no-store, no credential forwarding and safe pt-BR errors. ReceitaWS status/data and ViaCEP erro/payload/CEP matching are verified rather than assuming HTTP 200 establishes success. No raw provider payloads are retained or exposed.
 - CNPJ queries are explicit; valid CEP queries run on blur/confirmation, with duplicate suppression and no automatic ViaCEP request after a complete CNPJ address. Request generations, cancellation and per-field edit versions prevent stale asynchronous writes and preserve manually changed fields/address number. Final submission cancels pending queries and prevents duplicate creation.
 - Applied a process-wide rolling-window ReceitaWS throttle of three requests/minute and an independent application CEP throttle. Multi-instance/serverless/shared-egress deployment requires shared quota enforcement; this operational limitation is documented in modules/onboarding.md. No distributed storage dependency was added.
 - Added an authenticated JSON creation BFF using F02/F03 and a shared 16 KiB bounded request reader extracted from login. It forwards POST /companies once, validates CompanyResponseDto, handles 400/401/403/409/500 safely and preserves form inputs on errors. It refreshes the F06 list, verifies membership before setting the existing active-company cookie, and navigates the full document to the dashboard to discard stale state.
-- A committed creation with failed membership synchronization disables creation and offers only F06's existing access/selection action; it never automatically repeats POST /companies. Logout/401 behavior and company authorization remain unchanged. No backend/OpenAPI changes, new Cartly fields, roles or F08 features were introduced.
+- A committed creation with failed membership synchronization disables creation and offers only F06's existing access/selection action; it never automatically repeats POST /companies. Logout/401 behavior and company authorization remain unchanged. No backend/OpenAPI changes, new Venduzily fields, roles or F08 features were introduced.
 - Passed: npm test (338 tests across 25 files), npx tsc --noEmit --incremental false, npm run lint (zero errors; existing unused Logo warning), npm run api:check, npm run build and git diff --check.
 - Passed npm run test:auth:browser against the production Next.js server and isolated mock NestJS. Browser lookup responses are intercepted so public providers are never called during automation; successful/error provider mappings are independently tested with mocked Fetch. Verified two steps, manual fallback, retained values, exact normalized creation, single POST, active-company synchronization, dashboard redirect/refresh, responsive widths 320/390/768/1280 and existing F03/F06 regressions. Mobile screenshot was visually inspected. Browser automation explicitly waits for hydration/dynamic content before interactions/assertions.
 - Live positive NestJS creation and live public lookups were not claimed: no activated test account was supplied, and automated tests require no public API availability. Numeric-only CNPJ matches the user's explicit 14-digit requirement; alphanumeric support is outside this task. No implementation blockers remain for the configured single-process application. F08 remains unstarted.
@@ -116,7 +116,7 @@ Requested extension: allow users to view deleted products and reactivate them wi
 
 ## F08 acceptance evidence — 2026-10-17
 
-- Added a reusable App Router route-group layout with modular Sidebar/SidebarNavigation, DashboardHeader, MobileNavigation, UserMenu, decorative SVG icons and SCSS Modules. Reused Cartly logo, Inter/tokens, existing Button and F06 CompanySelector/ActiveCompanyProvider. Server-rendered pages/layout share one request-scoped authoritative company/context read; no persistent authorization cache or duplicate list request is introduced.
+- Added a reusable App Router route-group layout with modular Sidebar/SidebarNavigation, DashboardHeader, MobileNavigation, UserMenu, decorative SVG icons and SCSS Modules. Reused Venduzily logo, Inter/tokens, existing Button and F06 CompanySelector/ActiveCompanyProvider. Server-rendered pages/layout share one request-scoped authoritative company/context read; no persistent authorization cache or duplicate list request is introduced.
 - Added all requested pt-BR navigation labels. Dashboard is the only real module link and uses exact aria-current; unavailable modules are noninteractive Em breve entries. The minimal landing greets the authenticated user and shows the active company or selection prompt. No fake metrics, business pages, permission rules, backend operations or dependencies were added.
 - Header selection reuses F06 native authenticated POSTs and preference restoration. Zero-company onboarding, additional-company creation, denied/network states, 401 cleanup and 403 preservation remain functional. Company creation/back/retry links refresh the full document so App Router layout reuse cannot retain an outdated header context after list changes.
 - Persisted only validated login name/email in a bounded HttpOnly display cookie, Secure in production and integrity-bound to the current server-side JWT. Authentication remains F03/backend-authoritative; no JWT/signature is exposed to Client Components and no /me endpoint/secret/permission claim is invented. Logout/401 delete the snapshot. Existing sessions without a snapshot retain generic welcome/account text until login.

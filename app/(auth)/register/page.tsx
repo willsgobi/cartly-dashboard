@@ -6,7 +6,7 @@ export default function RegisterPage() {
     <main className={styles.page}>
       <section className={styles.card} aria-labelledby="register-title">
         <h1 id="register-title">Crie sua conta</h1>
-        <p>Cadastre seus dados para começar no Cartly.</p>
+        <p>Cadastre seus dados para começar no Venduzily.</p>
         <RegisterForm />
       </section>
     </main>

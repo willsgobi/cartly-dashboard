@@ -1,7 +1,7 @@
-# Cartly Dashboard — Design system
+# Venduzily Dashboard — Design system
 
 ## Reference
-Use the previously explored Cartly dashboard/login/onboarding layouts as **visual direction**, not as proof of implemented UI. Reference screenshots may be supplied separately. Responsive adaptation is required.
+Use the previously explored Venduzily dashboard/login/onboarding layouts as **visual direction**, not as proof of implemented UI. Reference screenshots may be supplied separately. Responsive adaptation is required.
 
 ## Foundation
 - Typography: Inter (400, 500, 600, 700); load using `next/font/google`, replacing the current starter Geist only in the foundation task.

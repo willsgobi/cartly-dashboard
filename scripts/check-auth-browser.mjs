@@ -15,7 +15,7 @@ export async function checkAuthBrowser(origin, { setProtectedStatus, setCompanie
   await once(reservation, "listening");
   const port = reservation.address().port;
   await new Promise((resolve) => reservation.close(resolve));
-  const profile = mkdtempSync(join(tmpdir(), "cartly-auth-browser-"));
+  const profile = mkdtempSync(join(tmpdir(), "venduzily-auth-browser-"));
   const browser = spawn(chrome, ["--headless=new", "--disable-gpu", "--no-first-run",
     `--remote-debugging-port=${port}`, `--user-data-dir=${profile}`, "about:blank"],
   { windowsHide: true, stdio: "ignore" });

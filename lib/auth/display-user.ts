@@ -7,7 +7,7 @@ const displayUserSchema = z.object({ name: z.string(), email: z.string() });
 export type DisplayUser = z.infer<typeof displayUserSchema>;
 export const displayUserCookieName = () => process.env.NODE_ENV === "production" ? "__Host-cartly_user" : "cartly_user";
 const options = () => ({ httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", path: "/" } as const);
-const sign = (token: string, payload: string) => createHmac("sha256", token).update(`cartly-display-user:${payload}`).digest();
+const sign = (token: string, payload: string) => createHmac("sha256", token).update(`venduzily-display-user:${payload}`).digest();
 
 /** Display-only login DTO snapshot. This cookie never authenticates or authorizes a request. */
 export function setDisplayUser(response: NextResponse, token: string, user: DisplayUser, expires: Date, maxAge: number) {
